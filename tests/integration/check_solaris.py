@@ -1,4 +1,5 @@
 """Disposable native Solaris/MaterialX authoring check; --render adds one small XPU render."""
+from tests.support import ARTIFACTS
 import json
 import sys
 import time
@@ -23,7 +24,7 @@ def create(name, **config):
 
 create('import_check',kind='import_sop',source_path=box.path(),prim_path='/World/box')
 material = create('blue_material',kind='material',prim_pattern='/World/box',base_color=[.02,.2,.8],roughness=.35,metalness=.2)
-from check_support import synthetic_textures
+from tests.support import synthetic_textures
 asset=synthetic_textures()
 textures=tools.call('houdini_materialx_textures',{'shader_path':material['shader_path'],
     'base_color_file':asset['albedo'],'roughness_file':asset['roughness'],
@@ -73,5 +74,5 @@ if '--render' in sys.argv:
     assert result['status'] in ('completed','cancelled'), result
     assert render_jobs.preview(start['job_id']).get('image_base64'),result
     print('PASS: XPU render status '+result['status']+'; WIP available before completion: '+str(saw_wip),flush=True)
-Path(__file__).with_name('validation-solaris-render.json' if '--render' in sys.argv else 'validation-solaris.json').write_text(json.dumps(report,indent=2),encoding='utf-8')
+(ARTIFACTS / ('validation-solaris-render.json' if '--render' in sys.argv else 'validation-solaris.json')).write_text(json.dumps(report,indent=2),encoding='utf-8')
 print('PASS: Solaris import, MaterialX USD binding, lights, camera and Karma XPU settings',flush=True)

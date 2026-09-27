@@ -7,7 +7,9 @@ import subprocess
 import tempfile
 import uuid
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
+ARTIFACTS = ROOT / ".local/checks"
+ARTIFACTS.mkdir(parents=True, exist_ok=True)
 
 
 def find_hython():

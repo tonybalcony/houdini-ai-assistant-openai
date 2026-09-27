@@ -1,6 +1,6 @@
-# Release review - 0.5.0 public preview
+# Release review - 0.5.1 repository cleanup
 
-Prepared 2026-09-27. Remote publication requires the owner's approval.
+Prepared 2026-09-27. Git updates are kept on the owner's VPS only; GitHub publication still requires approval.
 
 ## Proposed repository
 
@@ -15,9 +15,10 @@ Prepared 2026-09-27. Remote publication requires the owner's approval.
 ```text
 houdini-ai-assistant-openai/
   README.md, LICENSE, VERSION, CHANGELOG.md
-  AGENTS.md, ARCHITECTURE.md, DEVELOPMENT.md
+  AGENTS.md
+  docs/ARCHITECTURE.md, docs/DEVELOPMENT.md
   CONTRIBUTING.md, SECURITY.md, THIRD_PARTY.md
-  LOOKDEV_AND_DIAGNOSTICS.md, RELEASE_CHECKLIST.md
+  docs/LOOKDEV_AND_DIAGNOSTICS.md, docs/RELEASE_CHECKLIST.md
   .gitignore, .gitattributes
   .github/workflows/validate.yml
   scripts/audit_release.py, scripts/build_plugin.py
@@ -33,7 +34,7 @@ houdini-ai-assistant-openai/
   *_tools.py, *_contracts.py, mcp_*.py
   chat_store.py, diagnostics.py, runtime_settings.py
   texture_*.py, uthana_*.py, render_*.py, asset_worker.py
-  test_*.py, check_*.py
+  tests/unit/, tests/textures/, tests/integration/, tests/support.py
 ```
 
 The flat Python layout preserves the existing Houdini import architecture. The
@@ -59,12 +60,12 @@ release content. Ignored credential files are not opened or copied to the audit
 directory. Gitleaks scans the staged source export and Git history with redaction.
 Ignore rules alone are not a substitute for reviewing the exact commit contents.
 
-## Verification
+## Baseline verification from 0.5.0
 
 - Fresh local clone with no runtime environments, vendor tree, credentials, chat history
   or private texture settings: full setup succeeded using signed Python 3.13.15.
 - Both freshly installed dependency environments: `pip check` passed.
-- Current offline suite: **67 tests passed**, including dummy-key Windows DPAPI,
+- Baseline offline suite: **67 tests passed**, including dummy-key Windows DPAPI,
   account protocol, install failure/cancellation and packaging boundaries.
 - Native Houdini 22.0.368: saved-chat/Qt, scene editing, Stop/stale-call guards and
   APEX animation/focus checks passed in disposable processes.
@@ -93,7 +94,18 @@ Ignore rules alone are not a substitute for reviewing the exact commit contents.
   human browser sign-in, real API-key entry and the no-existing-Python bootstrap
   branch have not been tested on a fresh Windows OS. No user account was changed.
 
-## Before publication
+## 0.5.1 cleanup validation
+
+- Offline discovery passed: 62 assistant tests and 5 texture tests.
+- Native Qt onboarding and Solaris authoring passed using the relocated module entry points.
+- Native MCP check passed with 46 tools and the relocated child-process entry point; no model turn or render was requested.
+- The 60-file plugin ZIP matches the staged runtime/documentation source and excludes tests, maintenance scripts and CI configuration.
+- Native Houdini loaded the slim archive, registered its shelf and reached first-run setup without developer files.
+- Source syntax, documentation links and the staged-source credential scan passed.
+- Fourteen historical local reports were archived without deletion; ignored user assets, chats and credentials remain local.
+- Version label: v0.5.1; destination remains the owner's VPS Git repository, with no GitHub publication.
+
+## Before any future GitHub publication
 
 - [ ] Owner approves this structure, slug and public visibility.
 - [ ] Choose the GitHub account/organization during publication; do not assume a destination.
@@ -102,7 +114,7 @@ Ignore rules alone are not a substitute for reviewing the exact commit contents.
 - [ ] Create an empty GitHub repository, set origin and push main.
 - [ ] Verify remote HEAD equals local HEAD and review the remote tree/README/license.
 - [ ] Check the first CI run and enable private vulnerability reporting if desired.
-- [ ] Create a release/tag only when requested; 0.5.0 currently describes the prepared preview.
+- [ ] Create a release/tag only when requested; 0.5.1 currently describes the locally versioned preview.
 - [ ] Attach the audited plugin ZIP as a release download so users can install through Houdini's UI.
 
 ## Ongoing limitations

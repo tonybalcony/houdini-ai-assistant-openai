@@ -1,6 +1,6 @@
 # Contributing
 
-Read [AGENTS.md](AGENTS.md), [ARCHITECTURE.md](ARCHITECTURE.md) and [DEVELOPMENT.md](DEVELOPMENT.md). Keep changes focused and describe resulting behavior, test evidence and compatibility impact.
+Read [AGENTS.md](AGENTS.md), [ARCHITECTURE.md](docs/ARCHITECTURE.md) and [DEVELOPMENT.md](docs/DEVELOPMENT.md). Keep changes focused and describe resulting behavior, test evidence and compatibility impact.
 
 - Keep HOM work on Houdini's main thread, networking outside it.
 - Preserve separate billing, exact model selection, history recovery and cancellation guards.

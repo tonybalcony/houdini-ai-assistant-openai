@@ -1,4 +1,5 @@
 """Houdini integration checks. --live makes two small, billable Astra API turns."""
+from tests.support import ARTIFACTS
 import json
 import sys
 import time
@@ -10,7 +11,7 @@ import scene_tools
 from astra_panel import AstraPanel
 from chat_store import ChatStore
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 report = {'backend': 'OpenAI Agents SDK / Responses API', 'model': 'gpt-6-astra', 'checks': {}}
 subscription = '--subscription' in sys.argv
 if subscription:
@@ -58,7 +59,8 @@ except ValueError:
     assert hou.node(root.path() + '/invalid_batch') is None
 checks['invalid_batch_rejected_before_edits'] = True
 
-hou.pypanel.installFile(str(ROOT / 'astra.pypanel'))
+from panel_install import prepare_panel
+hou.pypanel.installFile(str(prepare_panel(ROOT)))
 assert hou.pypanel.interfaceByName('houdini_astra')
 widget = AstraPanel(chat_store=chat_store)
 assert [widget.model.itemData(i) for i in range(widget.model.count())] == ['gpt-6-astra', 'gpt-5.6-sol', 'gpt-5.6-terra']
@@ -68,7 +70,7 @@ assert not widget.connected
 widget.model.setCurrentIndex(0)
 checks['model_selector_and_fresh_conversation'] = True
 widget.resize(740, 740)
-widget.grab().save(str(ROOT / 'panel_preview.png'))
+widget.grab().save(str(ARTIFACTS / 'panel_preview.png'))
 checks['panel_load_and_render'] = True
 # Exercise duplicate delivery, Stop and scene-change guards without an API call.
 widget.write = lambda message: True
@@ -99,7 +101,7 @@ widget.shutdown()
 print('PASS: Houdini geometry, tools, panel, duplicate-call, Stop and scene-change checks', flush=True)
 
 if '--live' not in sys.argv:
-    (ROOT / 'validation-sdk-offline.json').write_text(json.dumps(report, indent=2))
+    (ARTIFACTS / 'validation-sdk-offline.json').write_text(json.dumps(report, indent=2))
     sys.exit(0)
 
 widget = AstraPanel(chat_store=chat_store)
@@ -121,8 +123,8 @@ def finish(error=None):
         print('FAIL:', error, flush=True)
     report['live_passed'] = not bool(error) and phase == 3
     report['usage'] = usage
-    widget.grab().save(str(ROOT / 'panel_preview.png'))
-    (ROOT / ('validation-subscription-live.json' if subscription else 'validation-sdk-live.json')).write_text(json.dumps(report, indent=2))
+    widget.grab().save(str(ARTIFACTS / 'panel_preview.png'))
+    (ARTIFACTS / ('validation-subscription-live.json' if subscription else 'validation-sdk-live.json')).write_text(json.dumps(report, indent=2))
     widget.shutdown()
     app.quit()
 

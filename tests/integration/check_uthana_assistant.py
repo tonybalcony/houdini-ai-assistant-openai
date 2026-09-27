@@ -1,4 +1,5 @@
 """Offline native Houdini test using an already downloaded Uthana motion."""
+from tests.support import ARTIFACTS
 import json
 import math
 from pathlib import Path
@@ -8,11 +9,11 @@ from PySide6 import QtWidgets, QtCore
 import scene_tools
 from astra_panel import AstraPanel
 from uthana_qt import UthanaCall
-from check_support import isolated_chat_store
+from tests.support import isolated_chat_store
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 if len(sys.argv) != 2:
-    raise SystemExit('Usage: hython check_uthana_assistant.py <already-downloaded-asset-id>; no new generation is performed')
+    raise SystemExit('Usage: hython -m tests.integration.check_uthana_assistant <already-downloaded-asset-id>; no new generation is performed')
 asset_id = sys.argv[1]
 app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 root = hou.node('/obj').createNode('geo', 'uthana_integration_check', run_init_scripts=False)
@@ -85,7 +86,7 @@ panel.shutdown()
 report = {'houdini': hou.applicationVersionString(), 'asset_id': asset_id,
           'checks': checks, 'retarget': result,
           'scope': 'Uses cached text-only Uthana test output. No API calls or uploads in this check; native viewport review remains manual.'}
-(ROOT / 'validation-uthana.json').write_text(json.dumps(report, indent=2))
+(ARTIFACTS / 'validation-uthana.json').write_text(json.dumps(report, indent=2))
 # A reviewable example scene stays in the workspace; the user's live scene is untouched.
 import uuid
 example = ROOT / 'output' / ('uthana_example_' + uuid.uuid4().hex + '.hip')

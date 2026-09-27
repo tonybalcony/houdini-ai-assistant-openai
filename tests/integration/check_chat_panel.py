@@ -1,4 +1,5 @@
 """Exercise persistence in real Houdini Qt; isolated DB and no network calls."""
+from tests.support import ARTIFACTS
 import tempfile
 from pathlib import Path
 import hou
@@ -46,6 +47,6 @@ with tempfile.TemporaryDirectory(prefix='astra-panel-history-') as directory:
     assert 'You: Now turn left' in store.get(first_id)['transcript']
     restored.load_chat(first_id)
     restored.resize(780, 760)
-    restored.grab().save(str(Path(__file__).parent / 'panel_preview.png'))
+    restored.grab().save(str(ARTIFACTS / 'panel_preview.png'))
     restored.shutdown()
 print('PASS: reopen, transcript, draft, model, chat switching, fresh context and new chat preservation')

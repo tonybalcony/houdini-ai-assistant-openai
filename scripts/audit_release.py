@@ -1,5 +1,6 @@
 """Audit the exact Git index, not ignored private files. No secret values are printed."""
 import ast
+import posixpath
 from pathlib import Path
 import re
 import subprocess
@@ -49,7 +50,7 @@ def main():
                 for target in re.findall(r'\[[^\]]*\]\(([^)]+)\)',text):
                     if '://' in target or target.startswith('#'):
                         continue
-                    destination=(path.parent/target.split('#')[0]).as_posix()
+                    destination=posixpath.normpath((path.parent/target.split('#')[0]).as_posix())
                     if destination not in names:
                         failures.append((name,'link is not included in release: '+destination))
         except (UnicodeError,SyntaxError,ET.ParseError) as exc:

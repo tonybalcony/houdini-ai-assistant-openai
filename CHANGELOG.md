@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.1 - repository cleanup (2026-09-27; VPS Git only)
+
+- Group offline tests, texture tests and opt-in Houdini checks under `tests/`.
+- Move architecture, development, lookdev and release guides into `docs/`.
+- Keep new validation reports and screenshots under ignored `.local/checks/`; preserve older reports in `.local/archive/0.5.0-reports/`.
+- Exclude tests, maintenance scripts and CI configuration from installable plugin ZIPs.
+- Update test commands, subprocess entry points and documentation links for the new layout.
+- Preserve runtime entry points, saved data and account behavior. No GitHub publication.
+
 ## 0.5.0 - plugin setup preview (prepared 2026-09-27; publication pending)
 
 - Houdini package archive and built-in AI Assistant shelf launcher.

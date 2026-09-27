@@ -17,7 +17,7 @@ from astra_panel import AstraPanel
 from chat_store import ChatStore
 from user_account import remember_backend
 
-ROOT=Path(__file__).resolve().parent
+ROOT=Path(__file__).resolve().parents[2]
 app=QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 
 

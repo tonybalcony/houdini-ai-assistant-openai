@@ -4,9 +4,9 @@ This is a Windows Houdini Python Panel application distributed as a source-only
 Houdini package archive, not a web service. Commands below assume this directory is the working
 directory. Tested host: Houdini 22.0.368, PySide6, Python 3.13.
 
-Read [ARCHITECTURE.md](ARCHITECTURE.md) for module ownership and process boundaries,
-[DEVELOPMENT.md](DEVELOPMENT.md) for setup/tests, and
-[RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) before preparing a public repository.
+Read [ARCHITECTURE.md](docs/ARCHITECTURE.md) for module ownership and process boundaries,
+[DEVELOPMENT.md](docs/DEVELOPMENT.md) for setup/tests, and
+[RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) before preparing a public repository.
 `README.md` is the public user guide. Historical local lessons/reports are excluded
 from Git; they are not current implementation specifications.
 
@@ -54,9 +54,8 @@ from Git; they are not current implementation specifications.
 3. Run relevant offline tests first. Standard regression commands:
 
    ```powershell
-   & ./.venv/Scripts/python.exe -m unittest test_worker test_codex_worker test_uthana test_mcp test_models test_chat_history test_diagnostics test_packaging
-   & ./.venv/Scripts/python.exe -m unittest test_onboarding
-   & ./.mcp-venv/Scripts/python.exe -m unittest test_texture_tools
+   & ./.venv/Scripts/python.exe -m unittest discover -s tests/unit -t .
+   & ./.mcp-venv/Scripts/python.exe -m unittest discover -s tests/textures -t .
    ```
 
 4. Use disposable `hython` scenes for HOM/APEX/USD/Qt work. `check_mcp.py` tests
@@ -78,6 +77,17 @@ push, choose a license or acquire paid assets unless the task calls for it.
 
 ## Public source and installation
 
+- Offline tests live in tests/unit and tests/textures; opt-in Houdini/live checks
+  live in tests/integration. Run checks as modules from the repository root
+  (`hython -m tests.integration.check_onboarding`), not as bare script paths.
+- Shared test support is tests/support.py; validation output belongs in ignored
+  .local/checks. Do not recreate flat test/check files at the repository root.
+- Longer architecture, development, lookdev and release guides live in docs/.
+  Runtime modules remain at the root to preserve existing Houdini entry points.
+- The plugin builder excludes tests/, scripts/ and .github/ from artist installs.
+  They remain tracked in Git for development. Preserve runtime files and licenses.
+- The current remote is the owner's VPS. GitHub publication remains unapproved;
+  pushing version updates to the VPS must not create or publish a GitHub repository.
 - Repository root is this directory. Keep sibling scenes/backups outside Git.
 - MIT was selected by the owner; preserve LICENSE and THIRD_PARTY.md.
 - VERSION supplies the client release version. Keep changelog and installation docs current.

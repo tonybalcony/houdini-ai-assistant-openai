@@ -2,6 +2,14 @@
 
 Run commands from the repository root in PowerShell. This is loaded Python source, not a compiled app. Keep SDK dependencies outside Houdini's embedded interpreter.
 
+Offline suites are under `tests/unit/` and `tests/textures/`. Native/live checks
+are under `tests/integration/` and must be invoked as modules from the repository
+root. Shared support is `tests/support.py`. New reports and screenshots go to
+`.local/checks/`; historical local reports are archived in `.local/archive/0.5.0-reports/`,
+not current test evidence.
+Developer-only `tests/`, `scripts/` and `.github/` folders are excluded from the
+plugin ZIP but remain in Git. Run tests and builds from a source checkout.
+
 ## Setup and configuration
 
 Normal users install the plugin ZIP and use its first-run Qt setup window; see the
@@ -45,8 +53,8 @@ Copy `local_settings.example.json` for a texture folder. Never put credentials i
 ## Offline regression
 
 ```powershell
-& ./.venv/Scripts/python.exe -m unittest test_worker test_codex_worker test_uthana test_mcp test_models test_chat_history test_diagnostics test_packaging test_onboarding
-& ./.mcp-venv/Scripts/python.exe -m unittest test_texture_tools
+& ./.venv/Scripts/python.exe -m unittest discover -s tests/unit -t .
+& ./.mcp-venv/Scripts/python.exe -m unittest discover -s tests/textures -t .
 ```
 
 No model calls, Houdini license or external credentials. Onboarding tests use dummy
@@ -63,15 +71,15 @@ Use disposable hython processes, never the artist's open scene:
 $hython = 'C:/path/to/Houdini/bin/hython.exe'
 $env:HOUDINI_ASTRA_HYTHON = $hython
 $env:QT_QPA_PLATFORM = 'offscreen'
-& $hython check_chat_panel.py
-& $hython check_onboarding.py
-& $hython check_sdk_assistant.py
-& $hython check_apex_assistant.py
-& $hython check_solaris.py
-& ./.venv/Scripts/python.exe check_mcp.py --solaris
+& $hython -m tests.integration.check_chat_panel
+& $hython -m tests.integration.check_onboarding
+& $hython -m tests.integration.check_sdk_assistant
+& $hython -m tests.integration.check_apex_assistant
+& $hython -m tests.integration.check_solaris
+& ./.venv/Scripts/python.exe -m tests.integration.check_mcp --solaris
 ```
 
-`check_support.py` discovers hython from an explicit override, PATH, HFS or a single installed Houdini 22 folder. Multiple ambiguous installations require an override. Panel checks use temporary chat stores.
+`tests/support.py` discovers hython from an explicit override, PATH, HFS or a single installed Houdini 22 folder. Multiple ambiguous installations require an override. Panel checks use temporary chat stores.
 
 The MCP check requires Codex ChatGPT sign-in and Houdini licensing. It performs native scene operations without a model turn. Raw stderr goes to `.local/mcp_check_stderr.log`. Lookdev checks create synthetic maps in the ignored cache; no private texture library or licensed asset is needed.
 
@@ -79,24 +87,24 @@ The MCP check requires Codex ChatGPT sign-in and Houdini licensing. It performs 
 auth events: retry, cancellation, masked key entry, remembered backend and launch
 behavior. It writes only a setup preview image into `.local/`. It does not sign in,
 log out or use a real API key. With `HOUDINI_ASTRA_CHECK_PACKAGE=1`, it additionally
-asserts native package/shelf registration; run from an extracted plugin with
+asserts native package/shelf registration; run from a source checkout installed as a package with
 `HOUDINI_PACKAGE_DIR` pointing to its parent directory. Use an isolated
 `HOUDINI_USER_PREF_DIR` containing the required `__HVER__` placeholder for native tests.
 
 ### Optional renders
 
 ```powershell
-& $hython check_solaris.py --render
-& $hython check_solaris.py --render --wip
-& ./.venv/Scripts/python.exe check_asset_bridge.py
-& ./.venv/Scripts/python.exe check_mcp.py --solaris
+& $hython -m tests.integration.check_solaris --render
+& $hython -m tests.integration.check_solaris --render --wip
+& ./.venv/Scripts/python.exe -m tests.integration.check_asset_bridge
+& ./.venv/Scripts/python.exe -m tests.integration.check_mcp --solaris
 ```
 
-Real XPU compute/licensing, no model calls. The asset bridge needs a preview-producing job recorded in `validation-solaris-render.json`. The MCP image assertion runs when that report exists; otherwise the report explicitly says skipped. A pass without it does not verify image delivery. The WIP check reports whether an image arrived before completion; fast renders may finish first.
+Real XPU compute/licensing, no model calls. The asset bridge needs a preview-producing job recorded in `.local/checks/validation-solaris-render.json`. The MCP image assertion runs when that report exists; otherwise the report explicitly says skipped. A pass without it does not verify image delivery. The WIP check reports whether an image arrived before completion; fast renders may finish first.
 
 For optional cached motion retargeting:
 ```powershell
-& $hython check_uthana_assistant.py '<already-downloaded-asset-id>'
+& $hython -m tests.integration.check_uthana_assistant '<already-downloaded-asset-id>'
 ```
 Supply your own cache entry. No new generation is performed. A uniquely named example is written to ignored `output/`; no motion fixture is distributed.
 
@@ -104,10 +112,10 @@ Supply your own cache entry. No new generation is performed. A uniquely named ex
 
 | Command | Behavior |
 |---|---|
-| `& ./.venv/Scripts/python.exe check_mcp.py --live` | One subscription turn. |
-| `& $hython check_sdk_assistant.py --live --subscription` | Two subscription turns through the panel. |
-| `& $hython check_sdk_assistant.py --live` | Two paid API turns. |
-| `& ./.venv/Scripts/python.exe check_chat_restart.py` | Two Terra subscription turns even without a --live flag. |
+| `& ./.venv/Scripts/python.exe -m tests.integration.check_mcp --live` | One subscription turn. |
+| `& $hython -m tests.integration.check_sdk_assistant --live --subscription` | Two subscription turns through the panel. |
+| `& $hython -m tests.integration.check_sdk_assistant --live` | Two paid API turns. |
+| `& ./.venv/Scripts/python.exe -m tests.integration.check_chat_restart` | Two Terra subscription turns even without a --live flag. |
 
 `check_assistant.py` delegates to the SDK check. The MCP host and restart Houdini scripts are child-process helpers. Do not invoke all check scripts indiscriminately.
 

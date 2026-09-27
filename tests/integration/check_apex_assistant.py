@@ -1,4 +1,5 @@
 """Offline Houdini/Qt regressions. Run with hython; no model requests."""
+from tests.support import ARTIFACTS
 import json
 from pathlib import Path
 import hou
@@ -6,7 +7,7 @@ import apex
 from PySide6 import QtCore, QtWidgets, QtTest
 import scene_tools
 from astra_panel import AstraPanel
-from check_support import isolated_chat_store
+from tests.support import isolated_chat_store
 
 checks = {}
 app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
@@ -132,5 +133,5 @@ widget.shutdown()
 window.close()
 report = {'houdini': hou.applicationVersionString(), 'checks': checks,
           'note': 'Separate headless scene and Qt window. Live docked-pane caret and viewport refresh still need user verification.'}
-Path(__file__).with_name('validation-apex.json').write_text(json.dumps(report, indent=2))
+(ARTIFACTS / 'validation-apex.json').write_text(json.dumps(report, indent=2))
 print(json.dumps(report, indent=2))

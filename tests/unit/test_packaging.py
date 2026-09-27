@@ -10,9 +10,9 @@ import xml.etree.ElementTree as ET
 import panel_install
 import runtime_settings
 import install_mcp_source
-from check_support import find_hython
+from tests.support import find_hython
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 
 
 class PackagingTests(unittest.TestCase):

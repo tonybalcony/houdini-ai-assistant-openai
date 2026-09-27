@@ -5,6 +5,7 @@ import sys
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+DEVELOPMENT_FOLDERS = {'tests', 'scripts', '.github'}
 
 
 def build():
@@ -15,6 +16,8 @@ def build():
     output.parent.mkdir(exist_ok=True)
     with zipfile.ZipFile(output,'w',compression=zipfile.ZIP_DEFLATED) as archive:
         for name in names:
+            if name.split('/')[0] in DEVELOPMENT_FOLDERS:
+                continue
             target = name if name == 'houdini-ai-assistant.json' else 'houdini-ai-assistant-openai/' + name
             archive.writestr(target,subprocess.check_output(['git','show',':'+name],cwd=ROOT))
     print(output)

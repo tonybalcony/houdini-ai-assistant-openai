@@ -50,12 +50,12 @@ the native Codex stream has a separate 32,000,000-byte bound.
 | `texture_contracts.py`, `texture_paths.py`, `texture_assets.py`, `asset_worker.py` | Library/cache bounds, HTTPS downloads, procedural PNGs and non-HOM asset/render queries. |
 | `uthana_client.py`, `uthana_worker.py`, `uthana_qt.py`, `uthana_scene.py` | Text-only Uthana API/cache, async Qt helper, downloaded FBX import and local biped/APEX retargeting. |
 | `chat_store.py`, `diagnostics.py` | SQLite chat catalogue/leases and rotating redacted diagnostics. |
-| `test_*.py`, `check_*.py` | Offline unit tests and optional native/live integration checks; see development guide. |
+| `tests/unit/`, `tests/textures/`, `tests/integration/` | Offline unit tests and optional native/live integration checks; see development guide. |
 | `install_mcp_source.py`, `setup*.ps1` | Signed Python environment setup and checksum-verified upstream source download. |
 | `runtime_settings.py`, `local_settings.example.json` | Optional user texture configuration; actual local settings stay ignored. |
-| `check_support.py`, `test_packaging.py` | Test host discovery, synthetic fixtures and moved-checkout regression checks. |
+| `tests/support.py`, `tests/unit/test_packaging.py` | Test host discovery, synthetic fixtures and moved-checkout regression checks. |
 | `vendor/houdini-mcp-7e5cd7a2484b899a6e9251c6f7b90228c2ec7990/` | Downloaded pinned upstream dependency, excluded from Git. |
-| `panel.py`, `check_assistant.py` | Compatibility wrappers; edit the implementations they delegate to. |
+| `panel.py`, `tests/integration/check_assistant.py` | Compatibility wrappers; edit the implementations they delegate to. |
 
 ## First-run installation and authentication
 

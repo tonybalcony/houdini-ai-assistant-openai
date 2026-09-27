@@ -2,7 +2,7 @@
 
 A conversational assistant inside Houdini that can inspect, build and edit your current scene. Chat in a Python Panel, keep conversations between sessions, animate APEX characters, and iterate on Solaris lookdev with render previews.
 
-**Version 0.5.0 - first public preview - Windows / Houdini 22**
+**Version 0.5.1 - first public preview - Windows / Houdini 22**
 
 An independent community project, not an official OpenAI, SideFX or Uthana product. It uses your own accounts; model availability depends on your account.
 
@@ -37,7 +37,7 @@ Python, dependencies and Codex are prepared by the setup window. Existing suppor
 
 ## Install the plugin
 
-1. Download the **plugin archive** `houdini-ai-assistant-0.5.0.zip` supplied with the release. This is different from GitHub's automatic **Source code (zip)** download.
+1. Download the **plugin archive** `houdini-ai-assistant-0.5.1.zip` supplied with the release. This is different from GitHub's automatic **Source code (zip)** download.
 2. In Houdini, choose **File > Install Package Archive...**, select the ZIP and choose your Houdini user **packages** folder as the installation location. Restart Houdini after installation.
 3. Enable the shelf through **shelf [+] > Shelves > AI Assistant**, then click **Open Assistant**.
 4. In the setup window, choose **ChatGPT subscription** or **OpenAI API key**, then click **Continue**. Setup downloads and verifies the required software in the background.
@@ -72,7 +72,7 @@ If using a Git clone or GitHub's source ZIP, name its folder **houdini-ai-assist
 - Setup uses signed official Python and Codex runtimes, pinned dependency versions and a checksum-verified [Houdini MCP download](THIRD_PARTY.md). It creates private environments inside the plugin folder. Nothing is installed into Houdini's embedded Python, and global Codex configuration is not rewritten.
 - First setup can take several minutes. **Open setup log** helps diagnose installation errors; **Retry** continues setup. Cancellation waits for the current installer step to finish. No model request is sent during setup.
 
-Never paste keys into chat prompts, shelf scripts, screenshots or Git commits. A `.env` file is not automatically loaded. Do not disable Windows security if a runtime is blocked; see [troubleshooting](DEVELOPMENT.md#troubleshooting).
+Never paste keys into chat prompts, shelf scripts, screenshots or Git commits. A `.env` file is not automatically loaded. Do not disable Windows security if a runtime is blocked; see [troubleshooting](docs/DEVELOPMENT.md#troubleshooting).
 
 ## Use the assistant
 
@@ -106,7 +106,7 @@ Restart Houdini after updating the plugin. Reconnecting an existing widget does 
 
 **Textures:** copy `local_settings.example.json` to ignored `local_settings.json` and set `texture_library` to your folder, or set `HOUDINI_ASTRA_TEXTURE_LIBRARY`. With neither configured, search uses the assistant's own cache. Library files are preserved. Automatic Fab/Epic sign-in/acquisition is not implemented; download licensed assets yourself or supply an authorized direct file URL.
 
-**Lookdev:** rendering uses Solaris/Karma XPU, lighting uses Solaris, materials use MaterialX. Working snapshots reduce resolution/samples and disable displacement/DOF/motion blur while preserving final scene settings. See [the lookdev guide](LOOKDEV_AND_DIAGNOSTICS.md).
+**Lookdev:** rendering uses Solaris/Karma XPU, lighting uses Solaris, materials use MaterialX. Working snapshots reduce resolution/samples and disable displacement/DOF/motion blur while preserving final scene settings. See [the lookdev guide](docs/LOOKDEV_AND_DIAGNOSTICS.md).
 
 ## Privacy and limitations
 
@@ -121,15 +121,41 @@ Restart Houdini after updating the plugin. Reconnecting an existing widget does 
 
 ## Development and license
 
+The repository separates runtime code from development files:
+
+```text
+houdini-ai-assistant-openai/
+  README.md, VERSION, CHANGELOG.md, LICENSE
+  AGENTS.md, CONTRIBUTING.md, SECURITY.md, THIRD_PARTY.md
+  docs/                Architecture, development, lookdev and release guides
+  tests/unit/          Offline assistant tests
+  tests/textures/      Offline texture tests
+  tests/integration/   Opt-in Houdini, MCP and live checks
+  tests/support.py     Shared fixtures and host discovery
+  scripts/             Source audit and plugin builder
+  toolbar/             Houdini shelf definition
+  *.py, *.pypanel       Runtime modules and entry points
+  setup*.ps1           Developer environment setup
+  requirements*.txt    Dependency versions
+```
+
+Runtime modules stay at the plugin root to preserve Houdini imports and existing
+installations. Tests, maintenance scripts and CI configuration remain in Git but
+are excluded from the installable ZIP. Generated reports go under ignored
+`.local/checks/`. Existing local history, assets, environments and older reports
+are preserved and never bundled. Historical local reports were moved to
+`.local/archive/0.5.0-reports/`. Git is currently hosted on the owner's VPS;
+there is no GitHub publication.
+
 Houdini loads Python source. Developers can use `setup.ps1` with signed Python 3.13 and build a source-only package ZIP from the audited Git index:
 
 ```powershell
 ./setup.ps1 -PythonExe 'C:/path/to/signed/Python313/python.exe'
-& ./.venv/Scripts/python.exe -m unittest test_worker test_codex_worker test_uthana test_mcp test_models test_chat_history test_diagnostics test_packaging test_onboarding
-& ./.mcp-venv/Scripts/python.exe -m unittest test_texture_tools
+& ./.venv/Scripts/python.exe -m unittest discover -s tests/unit -t .
+& ./.mcp-venv/Scripts/python.exe -m unittest discover -s tests/textures -t .
 & ./.venv/Scripts/python.exe scripts/build_plugin.py
 ```
 
-These tests make no model calls. See [DEVELOPMENT.md](DEVELOPMENT.md) for native checks, live-test costs and diagnostics; [AGENTS.md](AGENTS.md) and [ARCHITECTURE.md](ARCHITECTURE.md) for implementation guidance.
+These tests make no model calls. See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for native checks, live-test costs and diagnostics; [AGENTS.md](AGENTS.md) and [ARCHITECTURE.md](docs/ARCHITECTURE.md) for implementation guidance.
 
 See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) and [THIRD_PARTY.md](THIRD_PARTY.md). Original code is licensed under [MIT](LICENSE).

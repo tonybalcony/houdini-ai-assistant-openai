@@ -1,12 +1,13 @@
 """API worker local asset/image routing without starting the API client or a model."""
+from tests.support import ARTIFACTS
 import asyncio
 import json
 from pathlib import Path
 from worker import Worker
-from check_support import synthetic_textures
+from tests.support import synthetic_textures
 
 async def main():
-    report=json.loads(Path(__file__).with_name('validation-solaris-render.json').read_text(encoding='utf-8'))
+    report=json.loads((ARTIFACTS / 'validation-solaris-render.json').read_text(encoding='utf-8'))
     job_id=report['job_id']
     events=[]
     worker=Worker(events.append)

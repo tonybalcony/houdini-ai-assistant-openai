@@ -1,4 +1,5 @@
 """Real Codex -> MCP -> disposable Houdini check. --live adds one subscription turn."""
+from tests.support import ARTIFACTS
 import json
 import os
 from pathlib import Path
@@ -12,7 +13,7 @@ import uuid
 from codex_worker import CodexBridge, find_codex, subscription_environment
 from mcp_config import ROOT, REVISION
 
-from check_support import find_hython
+from tests.support import find_hython
 HYTHON = find_hython()
 checks = {}
 events = queue.Queue()
@@ -47,7 +48,7 @@ with log_path.open('w', encoding='utf-8') as log:
         env = subscription_environment(os.environ)
         env['QT_QPA_PLATFORM'] = 'offscreen'
         env['PYTHONUTF8'] = '1'
-        host = subprocess.Popen([HYTHON, str(ROOT/'check_mcp_houdini_host.py')], cwd=ROOT, env=env,
+        host = subprocess.Popen([HYTHON, '-m', 'tests.integration.check_mcp_houdini_host'], cwd=ROOT, env=env,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log, text=True, encoding='utf-8', creationflags=flags)
         processes.append(host)
         threading.Thread(target=read_lines, args=(host, 'host'), daemon=True).start()
@@ -138,7 +139,7 @@ with log_path.open('w', encoding='utf-8') as log:
             assert library['assets']
             checks['native_mcp_solaris_materialx_and_texture_tools']=True
             # Optional real render transport check; no developer-specific job ID.
-            report_path=ROOT/'validation-solaris-render.json'
+            report_path=ARTIFACTS/'validation-solaris-render.json'
             if report_path.is_file():
                 job=json.loads(report_path.read_text(encoding='utf-8'))['job_id']
                 preview=request('mcpServer/tool/call',{'threadId':bridge.thread_id,'server':'houdini',
@@ -146,7 +147,7 @@ with log_path.open('w', encoding='utf-8') as log:
                 assert any(c.get('type')=='image' for c in preview.get('content',[])), 'Preview is not model-viewable image content'
                 checks['native_mcp_preview_is_actual_image']=True
             else:
-                checks['native_mcp_preview_is_actual_image']='skipped: run check_solaris.py --render first'
+                checks['native_mcp_preview_is_actual_image']='skipped: run hython -m tests.integration.check_solaris --render first'
         request_id = bridge.serial
         bridge.new_thread(reset=True)
         pump_until(lambda: bridge.ready and bridge.serial > request_id)
@@ -166,7 +167,7 @@ with log_path.open('w', encoding='utf-8') as log:
             call('get_node_info', {'node_path': parent+'/ASTRA_MCP_LIVE', 'compact': True})
             checks['astra_chose_and_executed_mcp_tools'] = True
         report = {'passed': True, 'revision': REVISION, 'model_turns': int('--live' in sys.argv), 'checks': checks, 'tools': names}
-        (ROOT/'validation-mcp.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
+        (ARTIFACTS/'validation-mcp.json').write_text(json.dumps(report, indent=2), encoding='utf-8')
         print(json.dumps({'passed': True, 'checks': checks}), flush=True)
     finally:
         for process in reversed(processes):
