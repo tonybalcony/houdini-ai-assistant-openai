@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.2 - saved-chat connection recovery (2026-09-27; VPS Git only)
+
+- Do not save a Codex resume ID for an unused connection; save it before the first user turn.
+- Explain missing Codex rollout/history separately from sign-in failures.
+- Offer an explicit New chat & connect action while preserving the old transcript and draft.
+- Never replay a prompt or silently replace a missing conversation.
+- Add real Codex idle reconnect and native Qt recovery checks without model requests.
+
 ## 0.5.1 - repository cleanup (2026-09-27; VPS Git only)
 
 - Group offline tests, texture tests and opt-in Houdini checks under `tests/`.

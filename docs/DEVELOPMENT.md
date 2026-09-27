@@ -121,6 +121,20 @@ Supply your own cache entry. No new generation is performed. A uniquely named ex
 
 ## Troubleshooting
 
+For `thread/resume: no rollout found`, the saved conversation ID has no available
+Codex history in the current profile. This does not by itself mean sign-in failed.
+In versions through 0.5.1, simply connecting and closing before sending a prompt
+could leave such an ID. Version 0.5.2 saves a new ID only before the first user turn.
+For an existing affected chat, choose **New chat & connect** (or **New chat**, then
+**Connect** in older versions). The original transcript/draft remains in Saved chats;
+the new conversation does not inherit or replay it. Switching accounts alone cannot
+restore missing local Codex history. Distribute the clean plugin ZIP, not a used folder.
+
+`python -m tests.integration.check_codex_idle` checks real Codex connect/close/reopen
+without sending a model turn. It uses the current ChatGPT sign-in, temporary assistant
+chats and test-owned empty Codex threads. The legacy-ID branch reports whether the
+installed Codex reproduces missing-rollout behavior; it never reads unrelated histories.
+
 1. Read the current session in `.logs/`; correlate run/call IDs without dumping private history.
 2. If the worker cannot start, inspect its recorded program/OS error, run both environment interpreters with `--version` and inspect `Get-AuthenticodeSignature`. An unsigned Houdini launcher previously failed Smart App Control.
 3. Use signed standalone Python. To repair a same-major/minor environment after a base-runtime change, back up configuration and use Python's `-m venv --upgrade --without-pip`, then `pip check`. Setup does not relocate existing environments. Do not weaken security policy.

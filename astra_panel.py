@@ -46,6 +46,7 @@ class AstraPanel(QtWidgets.QWidget):
         self.chat = self.chat_lease = None
         self.restoring_chat = False
         self.reopened_chat = False
+        self.resume_unavailable_chat_id = None
         self.process = None
         self.mcp_session = HoudiniMcpSession(logger=self.log)
         self.buffer = b''
@@ -305,6 +306,8 @@ class AstraPanel(QtWidgets.QWidget):
         self.transcript.ensureCursorVisible()
 
     def update_controls(self):
+        unavailable = bool(self.chat and self.chat['id'] == self.resume_unavailable_chat_id)
+        self.new_button.setText('New chat & connect' if unavailable else 'New chat')
         self.send_button.setEnabled(self.connected and not self.busy and not self.pending_reset)
         self.stop_button.setEnabled(self.busy and not self.cancelled)
         self.undo_button.setEnabled(not self.busy)
@@ -409,6 +412,7 @@ class AstraPanel(QtWidgets.QWidget):
             self.log.event('panel_event',kind=event,run_id=message.get('run_id'),call_id=message.get('call_id'),
                            tool=message.get('tool'),status=message.get('status'),error=message.get('message') if event in ('fatal','error') else None)
         if event == 'ready':
+            self.resume_unavailable_chat_id = None
             if message.get('protocol') != PROTOCOL_VERSION or message.get('model') != self.model.currentData():
                 self.fail('Assistant protocol or model mismatch.')
                 return
@@ -424,6 +428,10 @@ class AstraPanel(QtWidgets.QWidget):
             return
         if event == 'fatal':
             self.fail(message.get('message', 'Worker initialization failed.'))
+            if message.get('code') == 'chat_resume_unavailable' and self.chat:
+                self.resume_unavailable_chat_id = self.chat['id']
+                self.status.setText('Saved chat unavailable · choose New chat & connect')
+                self.update_controls()
             return
         if event == 'subscription_limits':
             limits = message.get('limits') or {}
@@ -586,7 +594,8 @@ class AstraPanel(QtWidgets.QWidget):
     def new_chat(self):
         if self.busy:
             return
-        reconnect = self.connected
+        reconnect = self.connected or bool(self.chat and self.chat['id'] == self.resume_unavailable_chat_id)
+        self.resume_unavailable_chat_id = None
         self.start_timer.stop()
         self.stop_timer.stop()
         self.save_timer.stop()

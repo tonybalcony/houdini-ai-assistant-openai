@@ -1,4 +1,4 @@
-# Release review - 0.5.1 repository cleanup
+# Release review - 0.5.2 connection recovery
 
 Prepared 2026-09-27. Git updates are kept on the owner's VPS only; GitHub publication still requires approval.
 
@@ -127,3 +127,12 @@ works. See the README and architecture guide.
 The upstream MCP archive declares MIT in package metadata but lacks a standalone
 license notice; source is fetched from upstream rather than redistributed here.
 See THIRD_PARTY.md. Dependency vulnerabilities have not been fully audited.
+
+## 0.5.2 recovery validation
+
+The real Codex idle connect/close/reopen check reproduced the older missing-rollout
+behavior without model requests; the updated path reconnected successfully and
+preserved the unsent draft. Native Qt tested explicit recovery while retaining the
+old transcript/draft. Unit coverage verifies resume errors never replay prompts,
+first-turn checkpointing and explicit reset behavior. No account credentials or
+other users' histories were inspected.

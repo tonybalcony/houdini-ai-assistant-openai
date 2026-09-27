@@ -42,7 +42,7 @@ class SavedChatTests(unittest.TestCase):
         reopened = ChatLease(self.store, self.chat_id)
         reopened.close()
 
-    def test_codex_first_connection_is_durable_and_records_thread(self):
+    def test_unused_connection_does_not_leave_a_resume_id(self):
         events, rpc = [], []
         bridge = CodexBridge(events.append, rpc.append, chat_store=self.store, chat_id=self.chat_id)
         bridge.new_thread()
@@ -50,8 +50,33 @@ class SavedChatTests(unittest.TestCase):
         self.assertEqual(request['method'], 'thread/start')
         self.assertFalse(request['params']['ephemeral'])
         bridge.receive({'id': request['id'], 'result': {'thread': {'id': 'durable-thread'}, 'model': MODEL}})
-        self.assertEqual(self.store.get(self.chat_id)['codex_thread_id'], 'durable-thread')
+        self.assertIsNone(self.store.get(self.chat_id)['codex_thread_id'])
         self.assertTrue(bridge.ready)
+        reopened = CodexBridge(events.append, rpc.append, chat_store=self.store, chat_id=self.chat_id)
+        reopened.new_thread()
+        self.assertEqual(rpc[-1]['method'], 'thread/start')
+        self.assertFalse(any(r.get('method') == 'turn/start' for r in rpc))
+
+    def test_first_user_turn_records_thread_before_submission(self):
+        events, rpc = [], []
+        bridge = CodexBridge(events.append, rpc.append, chat_store=self.store, chat_id=self.chat_id)
+        bridge.thread_id = 'durable-thread'
+        bridge.run_id = 'first-turn'
+        bridge.start_turn({'text': 'inspect the scene'}, {})
+        self.assertEqual(rpc[-1]['method'], 'turn/start')
+        self.assertEqual(self.store.get(self.chat_id)['codex_thread_id'], 'durable-thread')
+        resumed = CodexBridge(events.append, rpc.append, chat_store=self.store, chat_id=self.chat_id)
+        self.assertEqual(resumed.resume_thread_id, 'durable-thread')
+
+    def test_explicit_reset_does_not_restore_previous_thread_on_reopen(self):
+        self.store.update(self.chat_id, codex_thread_id='previous-thread')
+        events, rpc = [], []
+        bridge = CodexBridge(events.append, rpc.append, chat_store=self.store, chat_id=self.chat_id)
+        bridge.new_thread(reset=True)
+        bridge.receive({'id': rpc[-1]['id'], 'result': {'thread': {'id': 'new-unused-thread'}, 'model': MODEL}})
+        self.assertTrue(bridge.ready)
+        self.assertIsNone(self.store.get(self.chat_id)['codex_thread_id'])
+        self.assertIsNone(bridge.resume_thread_id)
 
     def test_codex_resume_restores_id_and_refreshes_mcp_port(self):
         self.store.update(self.chat_id, codex_thread_id='durable-thread')
@@ -69,6 +94,21 @@ class SavedChatTests(unittest.TestCase):
         self.assertTrue(bridge.closed)
         self.assertEqual(self.store.get(self.chat_id)['codex_thread_id'], 'durable-thread')
         self.assertFalse(any(r.get('method') == 'thread/start' for r in rpc))
+        self.assertEqual(events[-1]['code'], 'chat_resume_unavailable')
+
+    def test_missing_rollout_preserves_draft_and_does_not_replay(self):
+        self.store.update(self.chat_id, codex_thread_id='other-pc-thread',
+                          draft='Do not automatically send this', transcript='Previous conversation')
+        events, rpc = [], []
+        bridge = CodexBridge(events.append, rpc.append, chat_store=self.store, chat_id=self.chat_id)
+        bridge.new_thread()
+        bridge.receive({'id': rpc[-1]['id'], 'error': {'message': 'no rollout found for thread id other-pc-thread'}})
+        record = self.store.get(self.chat_id)
+        self.assertEqual(record['draft'], 'Do not automatically send this')
+        self.assertEqual(record['transcript'], 'Previous conversation')
+        self.assertEqual(record['codex_thread_id'], 'other-pc-thread')
+        self.assertEqual(events[-1]['code'], 'chat_resume_unavailable')
+        self.assertEqual([r['method'] for r in rpc], ['thread/resume'])
 
     def test_api_recovers_full_tool_history_without_replaying(self):
         chat = self.store.create('scene.hip', 'api', MODEL)

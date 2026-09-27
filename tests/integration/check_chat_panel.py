@@ -6,6 +6,7 @@ import hou
 from PySide6 import QtWidgets
 from astra_panel import AstraPanel
 from chat_store import ChatStore
+from unittest.mock import patch
 
 app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 with tempfile.TemporaryDirectory(prefix='astra-panel-history-') as directory:
@@ -46,6 +47,16 @@ with tempfile.TemporaryDirectory(prefix='astra-panel-history-') as directory:
     assert restored.chat is None
     assert 'You: Now turn left' in store.get(first_id)['transcript']
     restored.load_chat(first_id)
+    restored.input.setPlainText('Keep my unsent draft')
+    restored.receive({'event': 'fatal', 'code': 'chat_resume_unavailable', 'message': 'Saved conversation unavailable'})
+    assert restored.new_button.text() == 'New chat & connect'
+    with patch.object(restored, 'connect_worker') as connect:
+        restored.new_button.click()
+        connect.assert_called_once()
+    assert store.get(first_id)['draft'] == 'Keep my unsent draft'
+    assert 'You: Now turn left' in store.get(first_id)['transcript']
+    assert restored.chat is None
+    assert restored.input.toPlainText() == ''
     restored.resize(780, 760)
     restored.grab().save(str(ARTIFACTS / 'panel_preview.png'))
     restored.shutdown()

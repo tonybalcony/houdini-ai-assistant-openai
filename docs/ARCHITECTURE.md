@@ -143,6 +143,13 @@ characters. A reopened chat receives fresh scene context and a recovery note bef
 new work. Loading/clearing a scene disconnects and saves the chat, not deletes history.
 Saving a conversation does not save a `.hip` file.
 
+Since 0.5.2, an unused subscription connection does not save its new thread ID in
+the chat catalogue. The ID is checkpointed immediately before a user turn is submitted,
+so closing an idle connection cannot leave a pointer to an unmaterialized rollout.
+Previously stored missing IDs are retained for recovery. A recognized missing-rollout
+error emits `chat_resume_unavailable`; the UI offers an explicit new-chat connection,
+preserving the old transcript/draft without replay or automatic history substitution.
+
 ## Rendering, animation and remaining limits
 
 - Solaris/Karma XPU/MaterialX is a standing workflow requirement. Legacy upstream

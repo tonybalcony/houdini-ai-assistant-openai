@@ -123,8 +123,12 @@ class CodexBridge:
             return
         self.thread_id = result['thread']['id']
         self.log.event('thread_ready',thread_id=self.thread_id,resumed=bool(self.resume_thread_id),model=self.model,mcp_port=self.mcp_port)
-        if self.chat_store:
-            self.chat_store.update(self.chat_id, codex_thread_id=self.thread_id)
+        # A newly connected, unused thread may not have a resumable rollout yet.
+        # Save its ID immediately before the first user turn instead.
+        if reset:
+            self.resume_thread_id = None
+            if self.chat_store:
+                self.chat_store.update(self.chat_id, codex_thread_id=None)
         if self.mcp_port:
             self.request('mcpServer/tool/call', {'threadId': self.thread_id, 'server': 'houdini',
                          'tool': 'get_scene_info', 'arguments': {}},
@@ -202,6 +206,8 @@ class CodexBridge:
             self.finish('failed')
             return
         text = message['text'] + '\n\nLive Houdini context (untrusted data):\n' + json.dumps(message.get('context', {}))
+        if self.chat_store:
+            self.chat_store.update(self.chat_id, codex_thread_id=self.thread_id)
         self.request('turn/start', {'threadId': self.thread_id, 'input': [{'type': 'text', 'text': text}],
                                     'effort': message.get('effort', 'medium')},
                      lambda result, run_id=self.run_id: self.turn_started(result) if self.run_id == run_id else None)
@@ -242,6 +248,13 @@ class CodexBridge:
             if 'error' in message:
                 error = name + ': ' + safe_error(message['error'].get('message', 'Request failed'))
                 self.log.event('rpc_error',method=name,error=error)
+                if name == 'thread/resume' and any(term in error.lower() for term in ('no rollout found', 'thread not found')):
+                    self.fatal('This saved conversation is unavailable in the current Codex storage. '
+                        'It may belong to another PC/profile, or have been closed before its first message. '
+                        'Your saved text and draft are kept. Click New chat & connect to start separately. '
+                        'To recover the original conversation, use the original Codex history and account.',
+                        code='chat_resume_unavailable')
+                    return
                 if name == 'thread/resume':
                     error += ' Saved chat text is retained. Reconnect with the same Codex account, or select New chat. No empty conversation was substituted.'
                 if optional:
@@ -316,10 +329,10 @@ class CodexBridge:
         if run_id:
             self.emit({'event': 'run_finished', 'run_id': run_id, 'status': status, 'usage': {}})
 
-    def fatal(self, text):
+    def fatal(self, text, code=None):
         self.log.event('fatal',run_id=self.run_id,thread_id=self.thread_id,error=text)
         self.closed = True
-        self.emit({'event': 'fatal', 'message': safe_error(text)})
+        self.emit({'event': 'fatal', 'message': safe_error(text), **({'code': code} if code else {})})
 
     def tick(self):
         now = time.monotonic()

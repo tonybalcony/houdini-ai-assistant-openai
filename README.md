@@ -2,7 +2,7 @@
 
 A conversational assistant inside Houdini that can inspect, build and edit your current scene. Chat in a Python Panel, keep conversations between sessions, animate APEX characters, and iterate on Solaris lookdev with render previews.
 
-**Version 0.5.1 - first public preview - Windows / Houdini 22**
+**Version 0.5.2 - first public preview - Windows / Houdini 22**
 
 An independent community project, not an official OpenAI, SideFX or Uthana product. It uses your own accounts; model availability depends on your account.
 
@@ -37,7 +37,7 @@ Python, dependencies and Codex are prepared by the setup window. Existing suppor
 
 ## Install the plugin
 
-1. Download the **plugin archive** `houdini-ai-assistant-0.5.1.zip` supplied with the release. This is different from GitHub's automatic **Source code (zip)** download.
+1. Download the **plugin archive** `houdini-ai-assistant-0.5.2.zip` supplied with the release. This is different from GitHub's automatic **Source code (zip)** download.
 2. In Houdini, choose **File > Install Package Archive...**, select the ZIP and choose your Houdini user **packages** folder as the installation location. Restart Houdini after installation.
 3. Enable the shelf through **shelf [+] > Shelves > AI Assistant**, then click **Open Assistant**.
 4. In the setup window, choose **ChatGPT subscription** or **OpenAI API key**, then click **Continue**. Setup downloads and verifies the required software in the background.
