@@ -74,7 +74,7 @@ with log_path.open('w', encoding='utf-8') as log:
         def pump_until(predicate, timeout=90):
             deadline = time.monotonic()+timeout
             while not predicate():
-                assert time.monotonic() < deadline, 'Integration step timed out; see tmp/mcp_check_stderr.log'
+                assert time.monotonic() < deadline, 'Integration step timed out; see .local/mcp_check_stderr.log'
                 try:
                     name, message = events.get(timeout=.2)
                 except queue.Empty:

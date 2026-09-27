@@ -1,0 +1,33 @@
+name: Validate source
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install isolated environments and pinned MCP
+        shell: pwsh
+        run: ./setup.ps1 -PythonExe (Get-Command python).Source
+      - name: Audit tracked source and Python syntax
+        run: ./.venv/Scripts/python.exe scripts/audit_release.py
+      - name: Assistant offline tests
+        run: ./.venv/Scripts/python.exe -m unittest test_worker test_codex_worker test_uthana test_mcp test_models test_chat_history test_diagnostics test_packaging
+      - name: Texture offline tests
+        run: ./.mcp-venv/Scripts/python.exe -m unittest test_texture_tools
+      - name: PowerShell syntax
+        shell: pwsh
+        run: |
+          Get-ChildItem *.ps1 | ForEach-Object {
+            $syntaxErrors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$syntaxErrors) | Out-Null
+            if ($syntaxErrors) { throw $syntaxErrors }
+          }
