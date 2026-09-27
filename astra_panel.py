@@ -120,7 +120,8 @@ class AstraPanel(QtWidgets.QWidget):
         self.stop_button = QtWidgets.QPushButton('Stop')
         self.undo_button = QtWidgets.QPushButton('Undo last edit')
         self.new_button = QtWidgets.QPushButton('New chat')
-        for button in (self.connect_button, self.send_button, self.stop_button, self.undo_button, self.new_button):
+        self.account_button = QtWidgets.QPushButton('Account')
+        for button in (self.connect_button, self.send_button, self.stop_button, self.undo_button, self.new_button, self.account_button):
             actions.addWidget(button)
         layout.addLayout(actions)
         self.connect_button.clicked.connect(self.connect_worker)
@@ -128,6 +129,7 @@ class AstraPanel(QtWidgets.QWidget):
         self.stop_button.clicked.connect(self.stop)
         self.undo_button.clicked.connect(self.undo)
         self.new_button.clicked.connect(self.new_chat)
+        self.account_button.clicked.connect(self.open_account_setup)
         self.shortcut = QtGui.QShortcut(QtGui.QKeySequence('Ctrl+Return'), self)
         self.shortcut.activated.connect(self.send)
         self.start_timer = QtCore.QTimer(self)
@@ -157,6 +159,36 @@ class AstraPanel(QtWidgets.QWidget):
         preferred = self.chat_store.preferred(hou.hipFile.path())
         if preferred:
             self.load_chat(preferred)
+
+    def start_saved_connection(self, backend=None):
+        """Only the real shelf/panel entry calls this; tests don't auto-connect."""
+        from user_account import preferences
+        saved = preferences()
+        if not saved.get('onboarding_complete'):
+            return
+        # An explicit setup choice wins and preserves the older chat separately.
+        # Ordinary reopening still resumes that chat's original billing mode.
+        if backend is not None or not self.chat:
+            self.backend.setCurrentIndex(1 if (backend or saved.get('backend')) == 'api' else 0)
+        QtCore.QTimer.singleShot(0, self.connect_worker)
+
+    def open_account_setup(self):
+        if self.busy:
+            self.note('Stop the current request before changing accounts.')
+            return
+        self.shutdown_process()
+        self.start_timer.stop()
+        self.stop_timer.stop()
+        self.connected = self.pending_reset = False
+        self.status.setText('Account setup')
+        self.update_controls()
+        from launch_ui import account_setup
+        def ready(backend):
+            if self._closed:
+                return
+            self.backend.setCurrentIndex(1 if backend == 'api' else 0)
+            self.connect_worker()
+        account_setup(self, ready)
 
     def schedule_save(self):
         if not self.restoring_chat and not self._closed:
@@ -301,7 +333,7 @@ class AstraPanel(QtWidgets.QWidget):
         self.shutdown_process()
         python = Path(os.environ.get('HOUDINI_ASTRA_PYTHON', str(ROOT / '.venv/Scripts/python.exe')))
         if not python.is_file():
-            self.fail('Assistant Python environment not found. Run setup.ps1 from the assistant folder.')
+            self.fail('Assistant software is missing. Open Account to prepare it again.')
             return
         self.buffer = b''
         self.connected = self.pending_reset = False

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<shelfDocument>
+  <toolshelf name="houdini_astra_shelf" label="AI Assistant">
+    <memberTool name="houdini_astra_open"/>
+  </toolshelf>
+  <tool name="houdini_astra_open" label="Open Assistant" icon="MISC_python">
+    <helpText>Set up or open your Houdini AI Assistant.</helpText>
+    <script scriptType="python"><![CDATA[
+import os
+import runpy
+from pathlib import Path
+runpy.run_path(str(Path(os.environ['HOUDINI_ASTRA_ROOT']) / 'open_panel.py'))
+]]></script>
+  </tool>
+</shelfDocument>

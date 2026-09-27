@@ -4,6 +4,9 @@ Run commands from the repository root in PowerShell. This is loaded Python sourc
 
 ## Setup and configuration
 
+Normal users install the plugin ZIP and use its first-run Qt setup window; see the
+README. Developers can still prepare the same dependencies from PowerShell:
+
 ```powershell
 ./setup.ps1 -PythonExe 'C:/path/to/signed/Python313/python.exe'
 ```
@@ -16,14 +19,21 @@ Full setup installs both environments. `setup_mcp.ps1` installs only MCP/helpers
 - `install_mcp_source.py`: verifies upstream revision/archive hash before extraction.
 - `vendor/`: ignored download. Existing source is reused; use a clean checkout for a fresh dependency check.
 - `panel_install.py`: generates ignored `.local/astra.pypanel` from a portable template.
+- `bootstrap.py`: stdlib-only background installer, signed runtime downloads and a
+  dependency fingerprint in `.local/setup.json`. A process lease prevents parallel installs.
+- `setup_ui.py`, `launch_ui.py`, `account_worker.py`: first-run UI, shelf entry and
+  private-pipe authentication. Houdini's Qt thread never runs network/login calls.
+- `user_account.py`: per-user preferences and Windows DPAPI key protection.
+- `codex_paths.py`: shared discovery including a verified local Codex fallback.
 
 Version pins are not artifact hash locks. Setup needs package-index and GitHub access. Upstream wheels/build files are generated locally and not committed.
 
 | Setting | Use |
 |---|---|
-| `HOUDINI_ASTRA_CODEX` | Explicit Codex executable; otherwise PATH then desktop runtime discovery. |
+| `HOUDINI_ASTRA_CODEX` | Explicit Codex executable; otherwise PATH, desktop runtime, then `.local/codex`. |
 | `HOUDINI_ASTRA_PYTHON` | Prepared assistant/Uthana interpreter; does not override MCP/helper interpreter. |
-| `OPENAI_API_KEY` | Explicit API mode, from process or Windows user/machine environment. |
+| `OPENAI_API_KEY` | Legacy API key from process or Windows environment; a key saved through setup takes precedence. |
+| `HOUDINI_ASTRA_USER_DIR` | Override account preference/DPAPI storage, especially for isolated dummy-key tests. |
 | `UTHANA_API_KEY` | Optional Uthana helper key override. |
 | `HOUDINI_ASTRA_TEXTURE_LIBRARY` | Texture folder, before `local_settings.json`; absent means cache-only. |
 | `HOUDINI_ASTRA_CHAT_DIR`, `HOUDINI_ASTRA_LOG_DIR` | Alternate chat/log folders. |
@@ -35,11 +45,15 @@ Copy `local_settings.example.json` for a texture folder. Never put credentials i
 ## Offline regression
 
 ```powershell
-& ./.venv/Scripts/python.exe -m unittest test_worker test_codex_worker test_uthana test_mcp test_models test_chat_history test_diagnostics test_packaging
+& ./.venv/Scripts/python.exe -m unittest test_worker test_codex_worker test_uthana test_mcp test_models test_chat_history test_diagnostics test_packaging test_onboarding
 & ./.mcp-venv/Scripts/python.exe -m unittest test_texture_tools
 ```
 
-No model calls, Houdini license or external credentials. Run individual modules for narrow changes. Avoid recursive discovery into downloaded vendor tests.
+No model calls, Houdini license or external credentials. Onboarding tests use dummy
+keys in temporary folders. The DPAPI check needs a normal Windows user profile;
+a restricted execution sandbox may not provide one. Do not replace encryption
+with plaintext to make a sandbox test pass. Run individual modules for narrow changes.
+Avoid recursive discovery into downloaded vendor tests.
 
 ## Native checks without model calls
 
@@ -50,6 +64,7 @@ $hython = 'C:/path/to/Houdini/bin/hython.exe'
 $env:HOUDINI_ASTRA_HYTHON = $hython
 $env:QT_QPA_PLATFORM = 'offscreen'
 & $hython check_chat_panel.py
+& $hython check_onboarding.py
 & $hython check_sdk_assistant.py
 & $hython check_apex_assistant.py
 & $hython check_solaris.py
@@ -59,6 +74,14 @@ $env:QT_QPA_PLATFORM = 'offscreen'
 `check_support.py` discovers hython from an explicit override, PATH, HFS or a single installed Houdini 22 folder. Multiple ambiguous installations require an override. Panel checks use temporary chat stores.
 
 The MCP check requires Codex ChatGPT sign-in and Houdini licensing. It performs native scene operations without a model turn. Raw stderr goes to `.local/mcp_check_stderr.log`. Lookdev checks create synthetic maps in the ignored cache; no private texture library or licensed asset is needed.
+
+`check_onboarding.py` runs the actual Qt setup widgets with mocked installation and
+auth events: retry, cancellation, masked key entry, remembered backend and launch
+behavior. It writes only a setup preview image into `.local/`. It does not sign in,
+log out or use a real API key. With `HOUDINI_ASTRA_CHECK_PACKAGE=1`, it additionally
+asserts native package/shelf registration; run from an extracted plugin with
+`HOUDINI_PACKAGE_DIR` pointing to its parent directory. Use an isolated
+`HOUDINI_USER_PREF_DIR` containing the required `__HVER__` placeholder for native tests.
 
 ### Optional renders
 
@@ -97,10 +120,35 @@ Supply your own cache entry. No new generation is performed. A uniquely named ex
 5. A timeout may leave completed edits. Inspect scene/job state before retrying. Stop cannot forcibly abort every HOM cook.
 6. Render diagnostics live in `.render_jobs/<id>/state.json`; keep XPU and report device initialization errors.
 7. API keys/model access and Codex subscription sign-in are separate. No billing fallback exists.
+8. First-run problems: use **Open setup log**, fix the reported dependency/network
+   issue, then **Retry**. The normal Windows PowerShell signature check uses system
+   modules so inherited PowerShell 7 module paths cannot break verification.
+9. **Account** reopens setup. Clearing only `preferences.json` in the user data
+   folder resets onboarding; do not delete Codex auth/session files or saved chats
+   as a troubleshooting shortcut. A corrupt encrypted API key must be re-entered.
 
 Only stop test-owned processes. Do not clear user chats, delete referenced caches or change global Codex settings to pass a check.
 
 ## Release validation
+
+Build the installable archive after staging the exact intended source:
+
+```powershell
+& ./.venv/Scripts/python.exe scripts/build_plugin.py
+```
+
+The builder audits and reads the **Git index**, not untracked/ignored files, and
+produces ignored `dist/houdini-ai-assistant-<VERSION>.zip`. Its root contains
+`houdini-ai-assistant.json` alongside `houdini-ai-assistant-openai/`. Houdini does
+not automatically scan arbitrary nested folders for package JSON. Never include
+prepared environments, downloaded runtimes, account data or caches in the ZIP.
+
+Extract the archive into a fresh writable test folder, run first setup, check both
+environments with `pip check`, and validate native shelf registration. The no-Python
+path uses the signed Python installer with a per-user target; setup must never
+disable execution policy or Smart App Control. An existing supported signed Python
+can be reused. Test account changes only with disposable state or explicit consent;
+reading existing ChatGPT sign-in through App Server does not require changing it.
 
 Windows CI runs offline tests and source hygiene, not native Houdini, sign-in or rendering. Before releasing, install a new clone with fresh environments and no private settings/history, then run available native checks.
 

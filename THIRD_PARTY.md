@@ -20,6 +20,14 @@ attribution remain in the downloaded source tree.
 
 ## Python dependencies and services
 
+The optional first-run bootstrap fetches official Python **3.13.15** from python.org
+and, when no Codex installation is discovered, the Windows x64 package from
+[OpenAI Codex rust-v0.157.1](https://github.com/openai/codex/releases/tag/rust-v0.157.1).
+Artifact URLs and SHA-256 values live in `bootstrap.py`; Windows publisher signatures
+are checked before use. The complete Codex runtime folder is preserved, including
+its supporting resources. These downloads are local installation data, not tracked
+source or contents of the distributed plugin ZIP. Their original licenses apply.
+
 `requirements-lock.txt` and `requirements-mcp-lock.txt` record tested dependency
 versions, including OpenAI/Agents SDK, FastMCP, RPyC, HTTPX and Pillow. Packages are
 installed from the package index and retain their respective licenses; consult their

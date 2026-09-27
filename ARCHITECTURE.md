@@ -35,6 +35,9 @@ the native Codex stream has a separate 32,000,000-byte bound.
 | Files | Responsibility |
 |---|---|
 | `open_panel.py`, `panel_install.py`, `astra.pypanel` | Shelf entry point, portable template and generated ignored panel registration with the installation path. |
+| `houdini-ai-assistant.json`, `toolbar/astra.shelf`, `scripts/build_plugin.py` | Native Houdini package/shelf and source-only ZIP assembly from the audited Git index. |
+| `launch_ui.py`, `setup_ui.py`, `bootstrap.py` | First-run Qt setup, background verified dependency installation, remembered launch and Account recovery. |
+| `account_worker.py`, `user_account.py`, `codex_paths.py` | Private-pipe account helper, native Codex browser login, API verification/DPAPI storage and executable discovery. |
 | `astra_panel.py` | Qt UI, focus repair, worker lifecycle, saved-chat selection, context capture, dedicated tool dispatch, Stop/Undo and diagnostics. |
 | `tool_contracts.py` | Protocol version, exact model IDs, base schemas/instructions; composes Solaris and texture contracts. |
 | `codex_worker.py` | Subscription auth, App Server protocol, native/dynamic tool bridge, streaming, rate limits, resume and watchdogs. |
@@ -53,6 +56,34 @@ the native Codex stream has a separate 32,000,000-byte bound.
 | `check_support.py`, `test_packaging.py` | Test host discovery, synthetic fixtures and moved-checkout regression checks. |
 | `vendor/houdini-mcp-7e5cd7a2484b899a6e9251c6f7b90228c2ec7990/` | Downloaded pinned upstream dependency, excluded from Git. |
 | `panel.py`, `check_assistant.py` | Compatibility wrappers; edit the implementations they delegate to. |
+
+## First-run installation and authentication
+
+Houdini discovers the package JSON alongside the source folder and loads the shelf
+definition. Its tool calls `open_panel.py`, then `launch_ui.launch()`. If dependency
+fingerprints and per-user onboarding preferences are valid, it opens the panel and
+queues a connection. Existing chats retain their original backend/model; there is
+no automatic model turn. Otherwise a setup dialog prepares the account and runtime.
+
+`SetupThread` performs installation without HOM calls. It uses a cross-process lease,
+locked dependency lists and private environments. Missing Python/Codex runtimes are
+downloaded from pinned official URLs, SHA-256 checked, and publisher-signature checked.
+The marker is written after dependency checks succeed. Cancellation is honored between
+steps, with downloads interruptible; Qt retains the dialog until its worker exits.
+The main Houdini window owns setup so closing a panel cannot destroy a live installer.
+
+After installation, `account_worker.py` runs in the external assistant interpreter.
+Subscription setup initializes App Server, reads account state and, when needed,
+uses `account/login/start` with type `chatgpt`. The UI opens the returned HTTPS auth
+URL; a completed notification triggers another account read. Codex persists auth.
+API setup sends a masked-field key through stdin, checks the models endpoint without
+a model request, then encrypts the key using Windows DPAPI. Only verified setup is
+remembered when the user clicks Open assistant. Neither flow changes billing mode
+implicitly. The panel's Account button reopens this flow after stopping its worker.
+
+The ZIP contains only audited source. It does not carry prepared runtimes, API keys,
+Codex sessions, chats or source-ignored data. Setup on each machine prepares these
+locally. The first release requires a writable Windows x64 installation folder.
 
 ## Tool execution and recovery
 
@@ -87,6 +118,8 @@ seconds, initial MCP scene checks 75 seconds; MCP config has startup/tool limits
 
 | Local storage | Contents and recovery implications |
 |---|---|
+| `%LOCALAPPDATA%/HoudiniAstra/` | Remembered backend and Windows DPAPI-encrypted API key; outside the install folder. Tests override with `HOUDINI_ASTRA_USER_DIR`. |
+| `.local/` | Generated panel, dependency marker, setup log/downloads and optional Codex runtime; ignored installation state. |
 | `.chat_history/chats.sqlite3` | SQLite WAL catalogue, transcript/draft, backend/model, scene path, Codex thread ID or API conversation items. OS chat leases prevent concurrent panel writers. |
 | Codex's own session storage | Full subscription model history. Back up this and the chat catalogue; the visible transcript alone is insufficient. |
 | `motion_cache/` | Uthana descriptions/settings, submission/job state and downloaded FBX. Referenced FBX must remain accessible to scenes. |

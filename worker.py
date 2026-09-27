@@ -18,6 +18,10 @@ from diagnostics import DiagnosticLog, NullLog
 
 
 def read_api_key():
+    from user_account import load_api_key
+    saved = load_api_key()
+    if saved:
+        return saved
     key = os.environ.get('OPENAI_API_KEY', '').strip()
     if key:
         return key
@@ -80,7 +84,7 @@ class Worker:
         from openai import AsyncOpenAI
         self.key = read_api_key()
         if not self.key:
-            self.emit({'event': 'fatal', 'message': 'OPENAI_API_KEY was not found. Set it in Windows, then reconnect or restart Houdini.'})
+            self.emit({'event': 'fatal', 'message': 'No API key was found. Open Account to enter your key, or configure OPENAI_API_KEY, then reconnect.'})
             return False
         set_tracing_disabled(True)
         self.runner = self.runner or Runner

@@ -21,15 +21,7 @@ from diagnostics import DiagnosticLog, NullLog
 ROOT = Path(__file__).resolve().parent
 
 
-def find_codex():
-    explicit = os.environ.get('HOUDINI_ASTRA_CODEX')
-    if explicit:
-        return explicit if Path(explicit).is_file() else ''
-    found = shutil.which('codex.exe') or shutil.which('codex')
-    if found:
-        return found
-    candidates = list((Path(os.environ.get('LOCALAPPDATA', '')) / 'OpenAI/Codex/bin').glob('*/codex.exe'))
-    return str(max(candidates, key=lambda p: p.stat().st_mtime)) if candidates else ''
+from codex_paths import find_codex
 
 
 def subscription_environment(source):
@@ -94,7 +86,7 @@ class CodexBridge:
     def check_account(self, result, continuation):
         account = result.get('account') or {}
         if account.get('type') != 'chatgpt':
-            self.fatal('Subscription mode requires a ChatGPT sign-in in Codex. Sign in with ChatGPT in Codex, then reconnect. API-key accounts are not accepted and API fallback is disabled.')
+            self.fatal('Subscription mode requires a ChatGPT sign-in in Codex. Open Account to sign in with ChatGPT, then reconnect. API-key accounts are not accepted and API fallback is disabled.')
             return
         self.plan = account.get('planType')
         continuation()
@@ -355,7 +347,7 @@ def main():
         print(json.dumps(message, ensure_ascii=False, allow_nan=False), flush=True)
     executable = find_codex()
     if not executable:
-        emit({'event': 'fatal', 'message': 'Codex executable not found. Install Codex or set HOUDINI_ASTRA_CODEX to codex.exe.'})
+        emit({'event': 'fatal', 'message': 'Codex executable not found. Open Account to install it, or set HOUDINI_ASTRA_CODEX to codex.exe.'})
         return
     process = None
     events = queue.Queue()

@@ -2,7 +2,7 @@
 
 A conversational assistant inside Houdini that can inspect, build and edit your current scene. Chat in a Python Panel, keep conversations between sessions, animate APEX characters, and iterate on Solaris lookdev with render previews.
 
-**Version 0.4.0 - first public preview - Windows / Houdini 22**
+**Version 0.5.0 - first public preview - Windows / Houdini 22**
 
 An independent community project, not an official OpenAI, SideFX or Uthana product. It uses your own accounts; model availability depends on your account.
 
@@ -19,7 +19,7 @@ An independent community project, not an official OpenAI, SideFX or Uthana produ
 | Backend | Your authentication | Billing and tools |
 |---|---|---|
 | **Subscription / Codex** (default) | ChatGPT sign-in in Codex | Shared Codex allowance; dedicated tools plus local Houdini MCP. |
-| **API / billed by tokens** | `OPENAI_API_KEY` | Separate API billing; Agents SDK and dedicated scene/APEX/lookdev tools. |
+| **API / billed by tokens** | Your API key, entered in setup | Separate API billing; Agents SDK and dedicated scene/APEX/lookdev tools. |
 
 There is **no automatic switch** to API billing or another model. The selector offers GPT-6 Astra, GPT-5.6 Sol and GPT-5.6 Terra. Missing account access produces an error, not substitution.
 
@@ -27,50 +27,58 @@ There is **no automatic switch** to API billing or another model. The selector o
 
 - Windows 10/11, 64-bit; tested with **Houdini 22.0.368** and PySide6.
 - A licensed Houdini installation. Karma XPU needs compatible hardware/drivers.
-- Official **64-bit Python 3.13** from [python.org](https://www.python.org/downloads/windows/) with a valid publisher signature. Do not install dependencies into Houdini's embedded Python.
 - Internet access for installation and model use.
-- Subscription: installed [Codex CLI or desktop](https://learn.chatgpt.com/docs/codex/cli), ChatGPT sign-in and access to Codex/the selected model.
+- A writable installation folder with space for Python environments and Codex.
+- Subscription: a ChatGPT account with access to Codex/the selected model.
 - API: an OpenAI API key, model access and API billing.
 - Optional: your own Uthana account/credits and local texture library.
 
-## Install
+Python, dependencies and Codex are prepared by the setup window. Existing supported installations can be reused; no terminal is needed for normal installation. This release supports Windows x64 only.
 
-Download/extract this repository's source ZIP or clone it into a writable folder. Open PowerShell **inside that folder** and run:
+## Install the plugin
 
-```powershell
-./setup.ps1
+1. Download the **plugin archive** `houdini-ai-assistant-0.5.0.zip` supplied with the release. This is different from GitHub's automatic **Source code (zip)** download.
+2. In Houdini, choose **File > Install Package Archive...**, select the ZIP and choose your Houdini user **packages** folder as the installation location. Restart Houdini after installation.
+3. Enable the shelf through **shelf [+] > Shelves > AI Assistant**, then click **Open Assistant**.
+4. In the setup window, choose **ChatGPT subscription** or **OpenAI API key**, then click **Continue**. Setup downloads and verifies the required software in the background.
+5. Complete browser sign-in, or paste your own API key into the masked field. Click **Open assistant** when connected.
+
+The next time you launch from the shelf, the assistant opens and connects using the remembered setup. You do not need to sign in each time. Revoked/expired credentials can require signing in again; use **Account** in the panel to repeat setup or change the connection method.
+
+Houdini also supports dragging a package ZIP into its window. See [SideFX's package installation guide](https://www.sidefx.com/docs/houdini/ref/windows/package_browser.html). This repository is currently prepared locally; the downloadable release will be available after publication.
+
+### Install by copying files
+
+Extract the plugin ZIP into your Houdini user packages folder. Keep **both** items alongside one another:
+
+```text
+<Houdini user preferences>/packages/
+  houdini-ai-assistant.json
+  houdini-ai-assistant-openai/
+    open_panel.py
+    toolbar/astra.shelf
+    ...assistant source...
 ```
 
-Setup discovers `py -3.13` or an existing local `.python313` installation. To supply Python explicitly:
+Use Houdini's Package Browser to locate the user package directory. On many Windows installations it is under `Documents/houdini22.0/packages`; OneDrive or custom preferences can change this location. [Houdini scans package JSON files directly inside that folder, not arbitrary nested repositories.](https://www.sidefx.com/docs/houdini/ref/plugins.html)
 
-```powershell
-./setup.ps1 -PythonExe 'C:/path/to/Python313/python.exe'
-```
+If using a Git clone or GitHub's source ZIP, name its folder **houdini-ai-assistant-openai**, place it inside packages, and copy its `houdini-ai-assistant.json` **one level up** into packages. Restart Houdini and use the same shelf/setup steps. Do not copy another person's prepared runtimes, credentials or chat history.
 
-Setup creates two private environments, installs pinned dependencies, fetches a checksum-verified [Houdini MCP revision](THIRD_PARTY.md), and checks package compatibility. Both environments are needed for the complete tool set, including API-mode texture/render helpers. Nothing is installed into Houdini's embedded Python, and global Codex settings are not changed.
+### How sign-in and setup work
 
-Follow your organization's PowerShell policy if scripts are blocked. Do not disable Smart App Control. Use a trusted signed Python installation; see [troubleshooting](DEVELOPMENT.md#troubleshooting).
+- **Subscription:** Codex's native [App Server login](https://learn.chatgpt.com/docs/app-server) opens the browser. The assistant reuses an existing ChatGPT sign-in when available. Codex manages its own credentials; the assistant never stores your ChatGPT password. Subscription mode rejects API-key logins.
+- **API:** create your own key on the [OpenAI platform](https://platform.openai.com/api-keys), then paste it into setup. The key is checked without generating a response and encrypted using Windows DPAPI for the current Windows user. API usage has separate billing; ChatGPT subscriptions do not supply API credits.
+- Account preferences and the encrypted API key live in `%LOCALAPPDATA%/HoudiniAstra`. They stay outside the plugin/source folder. Existing `OPENAI_API_KEY` environment configuration still works; a key saved in setup takes precedence.
+- Setup uses signed official Python and Codex runtimes, pinned dependency versions and a checksum-verified [Houdini MCP download](THIRD_PARTY.md). It creates private environments inside the plugin folder. Nothing is installed into Houdini's embedded Python, and global Codex configuration is not rewritten.
+- First setup can take several minutes. **Open setup log** helps diagnose installation errors; **Retry** continues setup. Cancellation waits for the current installer step to finish. No model request is sent during setup.
 
-### Use your own subscription
+Never paste keys into chat prompts, shelf scripts, screenshots or Git commits. A `.env` file is not automatically loaded. Do not disable Windows security if a runtime is blocked; see [troubleshooting](DEVELOPMENT.md#troubleshooting).
 
-Install Codex using the [official instructions](https://learn.chatgpt.com/docs/codex/cli), then sign in through Codex desktop or run:
+## Use the assistant
 
-```powershell
-codex login
-codex login status
-```
+Open **AI Assistant > Open Assistant**, wait for Ready, then **Send** or **Ctrl+Enter**. You can select a model in the panel; switching backend/model starts a separate conversation. Use **Connect** to retry a disconnected session.
 
-[Codex login](https://learn.chatgpt.com/docs/developer-commands#codex-login) opens a browser for ChatGPT authentication. Complete it with **your own account**. The assistant reuses that local sign-in; it does not ship the author's session or provide a separate login form. Select **Subscription / Codex** in the panel. API-key Codex logins are rejected in this mode.
-
-If discovery fails, set the user environment variable `HOUDINI_ASTRA_CODEX` to your actual `codex.exe` path, then restart Houdini.
-
-### Use your own API key
-
-Create a key in the [OpenAI API platform](https://platform.openai.com/api-keys). In Windows **Environment Variables > User variables**, add `OPENAI_API_KEY` with your key and restart Houdini. Choose **API / billed by tokens** in the panel. This backend does not require Codex sign-in. ChatGPT subscriptions do not supply API credits.
-
-Never paste keys into prompts, shelf scripts, screenshots or Git commits. A `.env` file is not automatically loaded by this assistant.
-
-## Open in Houdini
+For developers using a source folder outside packages, the existing Python Source Editor entry still works and now opens the same setup UI:
 
 In **Windows > Python Source Editor**, run this with the actual source folder:
 
@@ -79,9 +87,7 @@ import runpy
 runpy.run_path(r"C:/path/to/houdini-ai-assistant-openai/open_panel.py")
 ```
 
-The launcher generates an ignored, machine-local panel file automatically; no source path edits are needed. Use the same two lines in a Python shelf tool for convenience.
-
-Select backend/model, click **Connect**, wait for Ready, then **Send** or **Ctrl+Enter**.
+The launcher generates an ignored, machine-local panel file automatically; no source path edits are needed.
 
 Example prompts:
 - Explain this network, then add a mountain deformation to the selected sphere.
@@ -92,7 +98,7 @@ Example prompts:
 
 **Saved chats** restores history and drafts; click Connect to continue. **New chat** preserves earlier conversations. Changing backend/model creates a separate conversation. Save your `.hip` normally: chat persistence does not save your scene.
 
-Close and reopen the panel after updating source. Reconnecting an existing widget does not reload its code.
+Restart Houdini after updating the plugin. Reconnecting an existing widget does not reload its code. Keep the installation in a stable, writable location; moving it requires recreating its Python environments. There is no automatic update service.
 
 ## Optional integrations
 
@@ -111,15 +117,17 @@ Close and reopen the panel after updating source. Reconnecting an existing widge
 - Long cooks can block the UI. No general auto-rigger or world-space IK solver is supplied.
 - XPU engine execution does not itself prove GPU acceleration; drivers and devices matter.
 - macOS/Linux and other Houdini versions are not validated. Docking/focus and artistic motion quality need manual review.
-- Keep source in a stable writable location. Moving it requires recreating virtual environments and updating the shelf path.
+- Setup has been checked in an isolated installation folder on an existing Windows workstation. A fresh Windows OS and another person's interactive browser sign-in have not been tested.
 
 ## Development and license
 
-There is no compiled application build. Setup prepares Python environments and Houdini loads the source.
+Houdini loads Python source. Developers can use `setup.ps1` with signed Python 3.13 and build a source-only package ZIP from the audited Git index:
 
 ```powershell
-& ./.venv/Scripts/python.exe -m unittest test_worker test_codex_worker test_uthana test_mcp test_models test_chat_history test_diagnostics test_packaging
+./setup.ps1 -PythonExe 'C:/path/to/signed/Python313/python.exe'
+& ./.venv/Scripts/python.exe -m unittest test_worker test_codex_worker test_uthana test_mcp test_models test_chat_history test_diagnostics test_packaging test_onboarding
 & ./.mcp-venv/Scripts/python.exe -m unittest test_texture_tools
+& ./.venv/Scripts/python.exe scripts/build_plugin.py
 ```
 
 These tests make no model calls. See [DEVELOPMENT.md](DEVELOPMENT.md) for native checks, live-test costs and diagnostics; [AGENTS.md](AGENTS.md) and [ARCHITECTURE.md](ARCHITECTURE.md) for implementation guidance.

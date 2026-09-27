@@ -1,7 +1,7 @@
 # Guide for coding agents
 
-This is a Windows Houdini Python Panel application, not a web service or a Python
-package with a build step. Commands below assume this directory is the working
+This is a Windows Houdini Python Panel application distributed as a source-only
+Houdini package archive, not a web service. Commands below assume this directory is the working
 directory. Tested host: Houdini 22.0.368, PySide6, Python 3.13.
 
 Read [ARCHITECTURE.md](ARCHITECTURE.md) for module ownership and process boundaries,
@@ -55,6 +55,7 @@ from Git; they are not current implementation specifications.
 
    ```powershell
    & ./.venv/Scripts/python.exe -m unittest test_worker test_codex_worker test_uthana test_mcp test_models test_chat_history test_diagnostics test_packaging
+   & ./.venv/Scripts/python.exe -m unittest test_onboarding
    & ./.mcp-venv/Scripts/python.exe -m unittest test_texture_tools
    ```
 
@@ -87,3 +88,16 @@ push, choose a license or acquire paid assets unless the task calls for it.
   machine paths; only local_settings.example.json is public.
 - Run scripts/audit_release.py on the Git index plus a separate credential scanner
   before release. Review generated files and staged paths; never force-add secrets.
+- First-run setup is owned by launch_ui/setup_ui/bootstrap. Keep installation off
+  Houdini's UI thread and login in account_worker; credentials travel through pipes,
+  never argv or model context. Native Codex manages subscription auth; API keys use
+  per-Windows-user DPAPI outside source. Never persist plaintext API keys.
+- Account choices are explicit and remembered. Auto-connect must preserve a saved
+  chat's backend/model and must not send a model request or replay pending inputs.
+- scripts/build_plugin.py reads the audited index and VERSION. Stage intended
+  changes before building. The ZIP must contain root package JSON beside the source
+  folder; runtimes, vendor downloads and user settings remain excluded.
+- Test onboarding with temporary HOUDINI_ASTRA_USER_DIR and dummy keys only.
+  check_onboarding.py covers real Qt without network; package discovery checks
+  need an extracted archive and isolated Houdini preferences. Restart Houdini after
+  setup-module changes rather than reloading a live installer thread.

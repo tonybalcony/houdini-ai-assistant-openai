@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.5.0 - plugin setup preview (prepared 2026-09-27; publication pending)
+
+- Houdini package archive and built-in AI Assistant shelf launcher.
+- First-run setup window installs isolated dependencies and, when needed, verified Python/Codex runtimes.
+- Browser-based Codex ChatGPT sign-in and masked API-key entry with Windows user encryption.
+- Remembered account choice, automatic later connections and an Account button for setup recovery.
+- Setup progress, retry/cancellation, isolated installation checks and credential/auth protocol tests.
+
 ## 0.4.0 - first public preview (prepared 2026-09-27; publication pending)
 
 Included:

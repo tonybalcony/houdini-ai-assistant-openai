@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DENIED_PARTS = {'.secrets','.env','.chat_history','.logs','.render_jobs','motion_cache',
     'texture_cache','vendor','protocol','.venv','.mcp-venv','.python313','.runtime-install',
     '.local','__pycache__','output','render','backup','tmp','build','dist','.codex','.agents'}
-ALLOWED_SUFFIXES = {'.py','.ps1','.md','.txt','.pypanel','.json','.yml','.yaml'}
+ALLOWED_SUFFIXES = {'.py','.ps1','.md','.txt','.pypanel','.shelf','.json','.yml','.yaml'}
 ALLOWED_NAMES = {'.gitignore','.gitattributes','LICENSE','VERSION'}
 HOME_PATH = re.compile(r'(?i)[A-Z]:[/\\]Users[/\\][^/\\\s]+')
 
@@ -43,7 +43,7 @@ def main():
                 failures.append((name,'machine-specific user path'))
             if path.suffix=='.py':
                 ast.parse(text,filename=name)
-            if path.suffix=='.pypanel':
+            if path.suffix in ('.pypanel','.shelf'):
                 ET.fromstring(text)
             if path.suffix=='.md':
                 for target in re.findall(r'\[[^\]]*\]\(([^)]+)\)',text):

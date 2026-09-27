@@ -1,4 +1,4 @@
-# Release review - 0.4.0 public preview
+# Release review - 0.5.0 public preview
 
 Prepared 2026-09-27. Remote publication requires the owner's approval.
 
@@ -20,7 +20,10 @@ houdini-ai-assistant-openai/
   LOOKDEV_AND_DIAGNOSTICS.md, RELEASE_CHECKLIST.md
   .gitignore, .gitattributes
   .github/workflows/validate.yml
-  scripts/audit_release.py
+  scripts/audit_release.py, scripts/build_plugin.py
+  houdini-ai-assistant.json, toolbar/astra.shelf
+  launch_ui.py, setup_ui.py, bootstrap.py
+  account_worker.py, user_account.py, codex_paths.py
   setup.ps1, setup_mcp.ps1, setup_common.ps1
   install_mcp_source.py
   requirements*.txt
@@ -33,9 +36,10 @@ houdini-ai-assistant-openai/
   test_*.py, check_*.py
 ```
 
-The flat Python layout preserves the existing Houdini import architecture. Packaging
-changes are limited to portable setup/configuration, dependency acquisition, release
-metadata and test isolation/fixtures.
+The flat Python layout preserves the existing Houdini import architecture. The
+installable source-only ZIP places the package JSON at its root beside the source
+folder. It supplies an AI Assistant shelf and first-run setup/sign-in UI. Prepared
+runtimes are downloaded on each user's machine and excluded from the archive.
 
 ## What is included
 
@@ -60,7 +64,8 @@ Ignore rules alone are not a substitute for reviewing the exact commit contents.
 - Fresh local clone with no runtime environments, vendor tree, credentials, chat history
   or private texture settings: full setup succeeded using signed Python 3.13.15.
 - Both freshly installed dependency environments: `pip check` passed.
-- Offline suite: **55 tests passed** in both the working folder and clean clone.
+- Current offline suite: **67 tests passed**, including dummy-key Windows DPAPI,
+  account protocol, install failure/cancellation and packaging boundaries.
 - Native Houdini 22.0.368: saved-chat/Qt, scene editing, Stop/stale-call guards and
   APEX animation/focus checks passed in disposable processes.
 - Native Solaris/MaterialX authoring: passed with synthetic textures.
@@ -75,6 +80,18 @@ Ignore rules alone are not a substitute for reviewing the exact commit contents.
 - New renders/image transport, paid API/model calls and Uthana generation were not
   rerun for this packaging change. The MCP image check explicitly reported skipped.
   Existing render/animation behavior is unchanged.
+- Plugin ZIP extracted into a separate packages directory: Houdini discovered its
+  package root, shelf and tool. Qt setup retry/cancel, masked key, saved backend and
+  future launch without onboarding passed in a disposable Houdini process.
+- First-run bootstrap installed fresh worker/MCP environments and the complete
+  pinned portable Codex runtime from a checksum-verified cached official archive;
+  Windows signature checks passed. It reused an existing signed Python 3.13.15 base.
+- The portable Codex runtime recognized the existing ChatGPT account through the
+  new account helper. Native MCP edits, Solaris/MaterialX, procedural textures,
+  46-tool inventory and reconnect passed from that separate installation.
+- Browser login protocol success was tested with a simulated App Server. A new
+  human browser sign-in, real API-key entry and the no-existing-Python bootstrap
+  branch have not been tested on a fresh Windows OS. No user account was changed.
 
 ## Before publication
 
@@ -85,7 +102,8 @@ Ignore rules alone are not a substitute for reviewing the exact commit contents.
 - [ ] Create an empty GitHub repository, set origin and push main.
 - [ ] Verify remote HEAD equals local HEAD and review the remote tree/README/license.
 - [ ] Check the first CI run and enable private vulnerability reporting if desired.
-- [ ] Create a release/tag only when requested; 0.4.0 currently describes the prepared preview.
+- [ ] Create a release/tag only when requested; 0.5.0 currently describes the prepared preview.
+- [ ] Attach the audited plugin ZIP as a release download so users can install through Houdini's UI.
 
 ## Ongoing limitations
 

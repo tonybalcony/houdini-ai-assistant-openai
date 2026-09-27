@@ -20,9 +20,11 @@ jobs:
       - name: Audit tracked source and Python syntax
         run: ./.venv/Scripts/python.exe scripts/audit_release.py
       - name: Assistant offline tests
-        run: ./.venv/Scripts/python.exe -m unittest test_worker test_codex_worker test_uthana test_mcp test_models test_chat_history test_diagnostics test_packaging
+        run: ./.venv/Scripts/python.exe -m unittest test_worker test_codex_worker test_uthana test_mcp test_models test_chat_history test_diagnostics test_packaging test_onboarding
       - name: Texture offline tests
         run: ./.mcp-venv/Scripts/python.exe -m unittest test_texture_tools
+      - name: Build source-only Houdini package
+        run: ./.venv/Scripts/python.exe scripts/build_plugin.py
       - name: PowerShell syntax
         shell: pwsh
         run: |
