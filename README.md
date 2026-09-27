@@ -37,7 +37,7 @@ Python, dependencies and Codex are prepared by the setup window. Existing suppor
 
 ## Install the plugin
 
-1. Download the **plugin archive** `houdini-ai-assistant-0.5.2.zip` supplied with the release. This is different from GitHub's automatic **Source code (zip)** download.
+1. Download the **[v0.5.2 plugin ZIP](https://github.com/tonybalcony/houdini-ai-assistant-openai/releases/download/v0.5.2/houdini-ai-assistant-0.5.2.zip)** from [Releases](https://github.com/tonybalcony/houdini-ai-assistant-openai/releases). This is different from GitHub's automatic **Source code (zip)** download.
 2. In Houdini, choose **File > Install Package Archive...**, select the ZIP and choose your Houdini user **packages** folder as the installation location. Restart Houdini after installation.
 3. Enable the shelf through **shelf [+] > Shelves > AI Assistant**, then click **Open Assistant**.
 4. In the setup window, choose **ChatGPT subscription** or **OpenAI API key**, then click **Continue**. Setup downloads and verifies the required software in the background.
@@ -45,7 +45,7 @@ Python, dependencies and Codex are prepared by the setup window. Existing suppor
 
 The next time you launch from the shelf, the assistant opens and connects using the remembered setup. You do not need to sign in each time. Revoked/expired credentials can require signing in again; use **Account** in the panel to repeat setup or change the connection method.
 
-Houdini also supports dragging a package ZIP into its window. See [SideFX's package installation guide](https://www.sidefx.com/docs/houdini/ref/windows/package_browser.html). This repository is currently prepared locally; the downloadable release will be available after publication.
+Houdini also supports dragging a package ZIP into its window. See [SideFX's package installation guide](https://www.sidefx.com/docs/houdini/ref/windows/package_browser.html).
 
 ### Install by copying files
 
@@ -144,8 +144,8 @@ installations. Tests, maintenance scripts and CI configuration remain in Git but
 are excluded from the installable ZIP. Generated reports go under ignored
 `.local/checks/`. Existing local history, assets, environments and older reports
 are preserved and never bundled. Historical local reports were moved to
-`.local/archive/0.5.0-reports/`. Git is currently hosted on the owner's VPS;
-there is no GitHub publication.
+`.local/archive/0.5.0-reports/`. Development is also mirrored to the owner's VPS. Public release archives contain
+only the audited plugin source and documentation.
 
 Houdini loads Python source. Developers can use `setup.ps1` with signed Python 3.13 and build a source-only package ZIP from the audited Git index:
 

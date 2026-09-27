@@ -1,16 +1,18 @@
 # Release review - 0.5.2 connection recovery
 
-Prepared 2026-09-27. Git updates are kept on the owner's VPS only; GitHub publication still requires approval.
+Prepared 2026-09-27. The owner approved initial public GitHub publication on this date.
+The VPS remains a development mirror; only audited source is published.
 
-## Proposed repository
+## Repository
 
 - GitHub slug: `houdini-ai-assistant-openai`
 - README title: **Houdini AI Assistant (OpenAI)**
-- Visibility: public, after approval
+- Visibility: public (approved by the owner)
 - License: MIT (selected by the owner)
 - Default branch: `main`
 - Root: this assistant directory, not the surrounding Houdini workspace
-- No GitHub remote has been created/configured during preparation
+- GitHub: https://github.com/tonybalcony/houdini-ai-assistant-openai
+- VPS mirror remains configured separately as `vps`.
 
 ```text
 houdini-ai-assistant-openai/
@@ -107,14 +109,14 @@ Ignore rules alone are not a substitute for reviewing the exact commit contents.
 
 ## Before any future GitHub publication
 
-- [ ] Owner approves this structure, slug and public visibility.
-- [ ] Choose the GitHub account/organization during publication; do not assume a destination.
-- [ ] Install GitHub CLI if needed and authenticate the owner. It was not on PATH during preparation.
+- [x] Owner approves this structure, slug and public visibility.
+- [x] Owner authenticated as `tonybalcony` and selected the personal account.
+- [x] Installed checksum-verified GitHub CLI on the VPS; owner completed browser sign-in.
 - [ ] Recheck clean Git status, source/history scans and exact commit list.
 - [ ] Create an empty GitHub repository, set origin and push main.
 - [ ] Verify remote HEAD equals local HEAD and review the remote tree/README/license.
 - [ ] Check the first CI run and enable private vulnerability reporting if desired.
-- [ ] Create a release/tag only when requested; 0.5.1 currently describes the locally versioned preview.
+- [ ] Publish the existing v0.5.2 tag and its verified source-only plugin ZIP.
 - [ ] Attach the audited plugin ZIP as a release download so users can install through Houdini's UI.
 
 ## Ongoing limitations

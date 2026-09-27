@@ -86,8 +86,9 @@ push, choose a license or acquire paid assets unless the task calls for it.
   Runtime modules remain at the root to preserve existing Houdini entry points.
 - The plugin builder excludes tests/, scripts/ and .github/ from artist installs.
   They remain tracked in Git for development. Preserve runtime files and licenses.
-- The current remote is the owner's VPS. GitHub publication remains unapproved;
-  pushing version updates to the VPS must not create or publish a GitHub repository.
+- The owner approved the first public GitHub publication on 2026-09-27. Keep the
+  existing VPS remote (`vps`) and GitHub remote (`origin`) distinct. Verify destinations
+  before pushing; do not infer permission to publish unrelated repositories or data.
 - Repository root is this directory. Keep sibling scenes/backups outside Git.
 - MIT was selected by the owner; preserve LICENSE and THIRD_PARTY.md.
 - VERSION supplies the client release version. Keep changelog and installation docs current.
