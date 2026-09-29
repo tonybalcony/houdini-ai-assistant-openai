@@ -1,14 +1,10 @@
-"""One bounded local texture/render-status request, away from Houdini's UI thread."""
+"""One bounded local render-status request, away from Houdini's UI thread."""
 import json
 import sys
 from diagnostics import redact
-from texture_contracts import TEXTURE_NAMES
 RENDER_NAMES={'houdini_solaris_render_status','houdini_solaris_render_preview','houdini_solaris_render_cancel'}
 
 def call(name,arguments):
-    if name in TEXTURE_NAMES:
-        import texture_assets
-        return texture_assets.call(name,arguments)
     if name in RENDER_NAMES:
         from solaris_contracts import validate_arguments
         import render_jobs

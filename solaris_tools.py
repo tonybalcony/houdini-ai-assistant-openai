@@ -30,6 +30,8 @@ def prim_path(value):
 
 def inspect(path, root_prim):
     n = lop(path)
+    from scene_policy import validate_cook
+    validate_cook(n)
     stage = n.stage()
     if stage is None or n.errors():
         raise ValueError('Solaris cook failed: ' + '; '.join(n.errors()))
@@ -62,10 +64,15 @@ def create(parent, input_path, name, config):
     if not re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', name):
         raise ValueError('Use a node name containing letters, digits and underscores.')
     source = lop(input_path) if input_path else None
+    from scene_policy import validate_cook, validate_factory, validate_network, preferred_factory
+    validate_network(network)
+    if source:
+        validate_cook(source)
     if source and source.parent() != network:
         raise ValueError('Input must belong to the same Solaris network.')
     kind = config['kind']
     if kind == 'import_sop':
+        validate_cook(node(config['source_path']))
         if not isinstance(node(config['source_path']), hou.SopNode):
             raise ValueError('Import requires a SOP output node.')
         prim_path(config['prim_path'])
@@ -76,9 +83,10 @@ def create(parent, input_path, name, config):
     types = {'import_sop':'sopimport','material':'materiallibrary','camera':'camera',
              'karma':'karmarendersettings','light':'domelight' if config.get('light_type')=='dome' else 'light'}
     created = None
+    factory = preferred_factory(network, types[kind])
     with hou.undos.group('Astra: scene edit'):
         try:
-            created = network.createNode(types[kind], name)
+            created = network.createNode(factory, name, run_init_scripts=False, exact_type_name=True)
             n = created
             if source:
                 n.setInput(0, source)
@@ -89,9 +97,18 @@ def create(parent, input_path, name, config):
                             'enable_prefixabsolutepaths':1,'prefixabsolutepaths':1})
                 result['prim_path'] = config['prim_path']
             elif kind == 'material':
+                # Check factory definitions before SideFX's builder helper resolves
+                # its standard node names. Custom replacements are not supported.
+                for typename in ('subnet', 'subinput', 'mtlxstandard_surface', 'mtlxdisplacement', 'subnetconnector'):
+                    preferred_factory(n, typename)
                 import voptoolutils
                 builder = voptoolutils._setupMtlXBuilderSubnet(destination_node=n, name=name,
                     mask=voptoolutils.MTLX_TAB_MASK, render_context='mtlx')
+                # Freeze the helper's spare Python/HScript inheritance defaults to
+                # explicit values. They are not trusted native type parameters.
+                builder.parm('shader_referencetype').deleteAllKeyframes()
+                builder.parm('shader_referencetype').set('inherit')
+                builder.parm('shader_baseprimpath').set('/__class_mtl__/' + builder.name())
                 shader = builder.node('mtlxstandard_surface')
                 shader.parmTuple('base_color').set(config['base_color'])
                 shader.setParms({'specular_roughness':config['roughness'],'metalness':config['metalness']})
@@ -123,6 +140,7 @@ def create(parent, input_path, name, config):
                 if n.parm('engine').evalAsString() != 'xpu':
                     raise ValueError('Karma XPU selection could not be verified.')
                 result.update(engine='xpu',render_settings='/Render/' + n.name())
+            validate_cook(n)
             n.moveToGoodPosition()
             n.setDisplayFlag(True)
             return result
@@ -133,7 +151,13 @@ def create(parent, input_path, name, config):
 
 def render_start(path, frame, output_file, quality):
     import render_jobs
+    from access_policy import project_data, allowed_file
+    project_data('renders')  # Fail before any cook/export for an unsaved scene.
+    if output_file:
+        allowed_file(output_file, write=True)
     n = lop(path)
+    from scene_policy import validate_cook
+    validate_cook(n)
     if n.type().name().split('::')[0] not in ('karmarendersettings','karmarenderproperties','karma') or not n.parm('engine') or n.parm('engine').evalAsString() != 'xpu':
         raise ValueError('Render requires a Solaris Karma settings node with engine=xpu. No fallback is permitted.')
     husk = Path(hou.expandString('$HFS')) / 'bin/husk.exe'
@@ -152,6 +176,16 @@ def render_start(path, frame, output_file, quality):
         directory, manifest = render_jobs.prepare(output_file, frame, path, quality)
         snapshot = directory / 'scene.usdc'
         snapshot_stage = Usd.Stage.Open(stage.Flatten())
+        # No external USD/image/geometry dependencies may reach husk. A flattened
+        # snapshot still retains asset-valued attributes unless checked explicitly.
+        for prim in snapshot_stage.Traverse():
+            for attribute in prim.GetAttributes():
+                if attribute.GetTypeName() in (Sdf.ValueTypeNames.Asset, Sdf.ValueTypeNames.AssetArray):
+                    values = attribute.Get()
+                    values = values if attribute.GetTypeName() == Sdf.ValueTypeNames.AssetArray else [values]
+                    for value in values or []:
+                        if value and value.path:
+                            allowed_file(value.resolvedPath or value.path)
         if quality == 'working':
             optimize_working_stage(snapshot_stage, settings)
         snapshot_stage.GetRootLayer().Export(str(snapshot))
@@ -162,8 +196,6 @@ def render_start(path, frame, output_file, quality):
 
 def call(name, args):
     validate_arguments(name,args)
-    if name == 'houdini_materialx_textures':
-        return materialx_textures(**args)
     if name == 'houdini_solaris_create':
         return create(**args)
     if name == 'houdini_solaris_inspect':
@@ -228,44 +260,3 @@ def optimize_working_stage(stage, settings_path):
         if p.GetTypeName()=='Camera':
             p.GetAttribute('fStop').Clear()
             p.CreateAttribute('fStop',Sdf.ValueTypeNames.Float).Set(0)
-
-
-def materialx_textures(shader_path,base_color_file,roughness_file,metalness_file,normal_file,displacement_file,displacement_scale):
-    from texture_paths import allowed_texture
-    shader = node(shader_path)
-    if shader.type().name()!='mtlxstandard_surface':
-        raise ValueError('Select the mtlxstandard_surface shader inside a Solaris MaterialX Builder.')
-    builder = shader.parent()
-    if builder.parent().type().name()!='materiallibrary':
-        raise ValueError('MaterialX textures must be authored in a Solaris Material Library.')
-    maps = {'base_color':base_color_file,'specular_roughness':roughness_file,'metalness':metalness_file,
-            'normal':normal_file,'displacement':displacement_file}
-    files = {key:allowed_texture(value) for key,value in maps.items() if value}
-    created=[]
-    with hou.undos.group('Astra: scene edit'):
-        try:
-            for channel,file in files.items():
-                texture=builder.createNode('mtlximage',channel+'_texture')
-                created.append(texture.path())
-                texture.parm('signature').set('color3' if channel=='base_color' else 'vector3' if channel=='normal' else 'float')
-                texture.parm('file').set(str(file).replace('\\','/'))
-                texture.parm('filecolorspace').set('srgb_texture' if channel=='base_color' else 'raw')
-                if channel=='normal':
-                    normal=builder.createNode('mtlxnormalmap','normal_decode')
-                    normal.setNamedInput('in',texture,'out')
-                    shader.setNamedInput('normal',normal,'out')
-                    created.append(normal.path())
-                elif channel=='displacement':
-                    displace=builder.node('mtlxdisplacement') or builder.createNode('mtlxdisplacement','mtlxdisplacement')
-                    displace.setNamedInput('displacement',texture,'out')
-                    displace.parm('scale').set(displacement_scale)
-                    output=builder.node('displacement_output')
-                    if output is None:
-                        raise ValueError('Material builder has no MaterialX displacement output connector.')
-                    output.setInput(0,displace)
-                else:
-                    shader.setNamedInput(channel,texture,'out')
-            builder.layoutChildren()
-            return {'status':'success','shader_path':shader.path(),'created':created,'channels':list(files)}
-        except Exception as exc:
-            return {'status':'error','error':str(exc),'created':created,'note':'Earlier connections may remain; inspect before retrying.'}

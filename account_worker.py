@@ -42,8 +42,9 @@ def codex_login():
     executable=find_codex()
     if not executable:
         raise RuntimeError('Codex was not found. Run setup again.')
-    process=subprocess.Popen([executable,'-c','model_provider="openai"','app-server','--listen','stdio://'],
-        cwd=ROOT,env=clean_environment(),stdin=subprocess.PIPE,stdout=subprocess.PIPE,
+    from codex_policy import arguments, environment
+    process=subprocess.Popen(arguments(executable),
+        cwd=ROOT,env=environment(),stdin=subprocess.PIPE,stdout=subprocess.PIPE,
         stderr=subprocess.DEVNULL,text=True,encoding='utf-8',
         creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
     messages=queue.Queue()

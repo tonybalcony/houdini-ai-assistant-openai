@@ -8,7 +8,7 @@ import sys
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-DENIED_PARTS = {'.secrets','.env','.chat_history','.logs','.render_jobs','motion_cache',
+DENIED_PARTS = {'.runtime','.state','.astra','.secrets','.env','.chat_history','.logs','.render_jobs','motion_cache',
     'texture_cache','vendor','protocol','.venv','.mcp-venv','.python313','.runtime-install',
     '.local','__pycache__','output','render','backup','tmp','build','dist','.codex','.agents'}
 ALLOWED_SUFFIXES = {'.py','.ps1','.md','.txt','.pypanel','.shelf','.json','.yml','.yaml'}

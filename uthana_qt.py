@@ -15,12 +15,13 @@ class UthanaCall(QtCore.QObject):
         self.done = False
         self.output = bytearray()
         self.process = QtCore.QProcess(self)
-        env = QtCore.QProcessEnvironment.systemEnvironment()
-        for key in ('PYTHONHOME', 'PYTHONPATH', 'OPENAI_API_KEY', 'CODEX_API_KEY'):
-            env.remove(key)
+        from access_policy import child_environment
+        env = QtCore.QProcessEnvironment()
+        for key, value in child_environment().items():
+            env.insert(key, value)
         env.insert('PYTHONUTF8', '1')
         self.process.setProcessEnvironment(env)
-        python = os.environ.get('HOUDINI_ASTRA_PYTHON', str(ROOT / '.venv/Scripts/python.exe'))
+        python = str(ROOT / '.runtime/python/python.exe')
         self.process.setProgram(python)
         self.process.setArguments(['-u', str(ROOT / 'uthana_worker.py')])
         self.process.setWorkingDirectory(str(ROOT))

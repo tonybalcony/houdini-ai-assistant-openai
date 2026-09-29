@@ -8,8 +8,6 @@ from PySide6 import QtCore, QtGui, QtWidgets
 import hou
 import scene_tools
 from tool_contracts import MAX_MESSAGE_BYTES, MODEL, MODELS, MODEL_ENV, PROTOCOL_VERSION
-from mcp_config import PORT_ENV
-from mcp_session import HoudiniMcpSession
 from chat_store import CHAT_DIR_ENV, CHAT_ID_ENV, ChatLease, ChatStore, same_scene
 from diagnostics import DiagnosticLog, SESSION_ENV, LOG_DIR_ENV
 
@@ -43,12 +41,13 @@ class AstraPanel(QtWidgets.QWidget):
         super().__init__()
         self.log = DiagnosticLog('panel',session=uuid.uuid4().hex)
         self.chat_store = chat_store or ChatStore()
+        self._injected_store = chat_store is not None
+        self._store_scene = hou.hipFile.path()
         self.chat = self.chat_lease = None
         self.restoring_chat = False
         self.reopened_chat = False
         self.resume_unavailable_chat_id = None
         self.process = None
-        self.mcp_session = HoudiniMcpSession(logger=self.log)
         self.buffer = b''
         self.connected = self.busy = self.cancelled = self.pending_reset = False
         self.run_id = self.stream_id = self.last_run_status = self.scene_file = None
@@ -69,9 +68,9 @@ class AstraPanel(QtWidgets.QWidget):
         self.status = QtWidgets.QLabel('Disconnected · GPT-6 Astra')
         self.status.setWordWrap(True)
         layout.addWidget(self.status)
-        self.mcp_status = QtWidgets.QLabel('Houdini MCP · starts with Subscription mode')
-        self.mcp_status.setToolTip('Diagnostic logs: ' + str(self.log.directory))
-        layout.addWidget(self.mcp_status)
+        self.tool_status = QtWidgets.QLabel('Checked tools · plugin + saved $HIP only')
+        self.tool_status.setToolTip('Diagnostic logs: ' + str(self.log.directory))
+        layout.addWidget(self.tool_status)
         history_row = QtWidgets.QHBoxLayout()
         history_row.addWidget(QtWidgets.QLabel('Saved chats'))
         self.chats = QtWidgets.QComboBox()
@@ -156,6 +155,7 @@ class AstraPanel(QtWidgets.QWidget):
         ''')
         self.update_controls()
         self.note('Subscription mode uses your ChatGPT sign-in through Codex. API mode is available only when you explicitly select it; there is no automatic fallback. Scene context is sent to the selected service. Ctrl+Enter sends.')
+        self.note('Chat is saved only for this scene.' if self.chat_store.persistent else 'Unsaved scene: chat is temporary and is lost when the panel or scene closes.')
         self.refresh_chats()
         preferred = self.chat_store.preferred(hou.hipFile.path())
         if preferred:
@@ -219,6 +219,8 @@ class AstraPanel(QtWidgets.QWidget):
         self.chats.clear()
         self.chats.addItem('New chat', None)
         for chat in self.chat_store.list():
+            if not same_scene(chat['scene'], hou.hipFile.path()):
+                continue
             label = chat['title'] + ' · ' + Path(chat['scene']).name
             self.chats.addItem(label, chat['id'])
         self.chats.setCurrentIndex(max(0, self.chats.findData(self.chat['id'] if self.chat else None)))
@@ -236,6 +238,8 @@ class AstraPanel(QtWidgets.QWidget):
             return
         try:
             chat = self.chat_store.get(chat_id)
+            if not same_scene(chat['scene'], hou.hipFile.path()):
+                raise PermissionError('Access denied: this chat belongs to another scene.')
             if self.backend.findData(chat['backend']) < 0 or self.model.findData(chat['model']) < 0:
                 raise ValueError('This saved chat uses a backend or model unavailable in this panel.')
             lease = ChatLease(self.chat_store, chat_id)
@@ -334,39 +338,30 @@ class AstraPanel(QtWidgets.QWidget):
             self.note('Unable to open saved chat: ' + str(exc))
             return
         self.shutdown_process()
-        python = Path(os.environ.get('HOUDINI_ASTRA_PYTHON', str(ROOT / '.venv/Scripts/python.exe')))
+        python = ROOT / '.runtime/python/python.exe'
         if not python.is_file():
             self.fail('Assistant software is missing. Open Account to prepare it again.')
             return
         self.buffer = b''
         self.connected = self.pending_reset = False
-        if self.backend.currentData() == 'subscription':
-            try:
-                mcp_port = self.mcp_session.start()
-            except Exception as exc:
-                self.fail(str(exc))
-                return
-            self.mcp_status.setText('Houdini MCP · connecting to this scene…')
-        else:
-            mcp_port = None
-            self.mcp_status.setText('Houdini MCP · available in Subscription mode')
+        self.tool_status.setText('Restricted Houdini tools · plugin + saved $HIP only')
         self.process = QtCore.QProcess(self)
-        env = QtCore.QProcessEnvironment.systemEnvironment()
-        for key in ('PYTHONHOME', 'PYTHONPATH', 'UTHANA_API_KEY'):
-            env.remove(key)
-        if self.backend.currentData() == 'subscription':
-            for key in ('OPENAI_API_KEY', 'CODEX_API_KEY', 'OPENAI_BASE_URL'):
-                env.remove(key)
+        from access_policy import child_environment
+        env = QtCore.QProcessEnvironment()
+        for key, value in child_environment().items():
+            env.insert(key, value)
         env.insert('PYTHONUTF8', '1')
         env.insert('PYTHONUNBUFFERED', '1')
         env.insert(MODEL_ENV, self.model.currentData())
-        env.insert(CHAT_DIR_ENV, str(self.chat_store.directory))
-        env.insert(CHAT_ID_ENV, self.chat['id'])
+        env.remove(CHAT_DIR_ENV)
+        env.remove(CHAT_ID_ENV)
+        if self.chat_store.persistent:
+            env.insert(CHAT_ID_ENV, self.chat['id'])
+        from access_policy import SCENE_ENV, scene_path
+        saved_scene = scene_path()
+        env.insert(SCENE_ENV, str(saved_scene) if saved_scene else '')
         env.insert(SESSION_ENV,self.log.session)
         env.insert(LOG_DIR_ENV,str(self.log.directory))
-        env.remove(PORT_ENV)
-        if mcp_port:
-            env.insert(PORT_ENV, str(mcp_port))
         self.process.setProcessEnvironment(env)
         self.process.setWorkingDirectory(str(ROOT))
         self.process.setProgram(str(python))
@@ -377,7 +372,7 @@ class AstraPanel(QtWidgets.QWidget):
         self.process.readyReadStandardError.connect(lambda: self.process and self.log.stderr(bytes(self.process.readAllStandardError())))
         self.process.errorOccurred.connect(self.process_error)
         self.process.finished.connect(self.process_finished)
-        self.log.event('connection_started',backend=self.backend.currentData(),model=self.model.currentData(),mcp_port=mcp_port,chat_id=self.chat['id'])
+        self.log.event('connection_started',backend=self.backend.currentData(),model=self.model.currentData(),chat_id=self.chat['id'])
         self.status.setText('Connecting · ' + self.backend.currentText())
         self.connect_button.setEnabled(False)
         self.model.setEnabled(False)
@@ -420,8 +415,7 @@ class AstraPanel(QtWidgets.QWidget):
             self.connected = True
             if message.get('resumed'):
                 self.note('Model conversation resumed; previous messages and tool context are available.')
-            if message.get('mcp'):
-                self.mcp_status.setText('Houdini MCP · connected')
+            self.tool_status.setText('Checked Houdini tools · plugin + saved $HIP')
             self.status.setText('Ready · ' + self.model.currentText() + ' · ' + ('ChatGPT subscription verified' if self.backend.currentData() == 'subscription' else 'API access checked on first message'))
             self.update_controls()
             self.save_chat()
@@ -460,12 +454,12 @@ class AstraPanel(QtWidgets.QWidget):
             self.append_text(message.get('delta', ''))
         elif event == 'tool_request':
             QtCore.QTimer.singleShot(0, lambda m=message: self.handle_tool(m))
-        elif event in ('mcp_tool','asset_tool'):
+        elif event == 'asset_tool':
             state = message.get('status', 'completed')
-            label='Houdini MCP · ' if event=='mcp_tool' else 'Render · ' if message['tool'].startswith('houdini_solaris_render_') else 'Textures · '
+            label='Render · '
             self.note(label + message['tool'] + ('…' if state == 'started' else ' · ' + state))
             if state != 'started':
-                self.last_tool_results.append({'tool': 'mcp:' + message['tool'], 'result': {'status': state}})
+                self.last_tool_results.append({'tool': message['tool'], 'result': {'status': state}})
             if message.get('error'):
                 self.note(message['error'])
         elif event == 'error':
@@ -546,6 +540,8 @@ class AstraPanel(QtWidgets.QWidget):
         if not text or not self.connected or self.busy or self.pending_reset:
             return
         try:
+            from access_policy import validate_prompt_paths
+            validate_prompt_paths(text)
             context = scene_tools.context()
             context['chat_recovery'] = {
                 'reopened_conversation': self.reopened_chat,
@@ -614,7 +610,8 @@ class AstraPanel(QtWidgets.QWidget):
         self.restoring_chat = False
         self.refresh_chats()
         self.status.setText('New chat · ' + self.model.currentText())
-        self.note('New conversation. Previous chats are saved; scene edits remain.')
+        self.note('New conversation. Previous chats belong to this saved scene.' if self.chat_store.persistent else
+                  'New temporary conversation. Unsaved chats are lost when the panel closes.')
         self.update_controls()
         if reconnect:
             self.connect_worker()
@@ -623,15 +620,57 @@ class AstraPanel(QtWidgets.QWidget):
         if event in (hou.hipFileEventType.BeforeClear, hou.hipFileEventType.BeforeLoad):
             self.generation += 1
             self.save_chat()
-            self.fail('Scene changed. Chat saved; reconnect after the new scene loads.')
+            self.fail('Scene changed. Reconnect after the new scene loads.')
         elif event in (hou.hipFileEventType.AfterLoad, hou.hipFileEventType.AfterClear):
+            self.switch_scene_store()
             preferred = self.chat_store.preferred(hou.hipFile.path())
             if preferred:
                 self.load_chat(preferred)
-        elif event == hou.hipFileEventType.AfterSave and self.chat:
-            self.chat['scene'] = hou.hipFile.path()
-            self.chat_store.update(self.chat['id'], scene=self.chat['scene'])
-            self.refresh_chats()
+        elif event == hou.hipFileEventType.AfterSave:
+            if not self.chat_store.persistent:
+                transcript, draft = self.transcript.toPlainText(), self.input.toPlainText()
+                self.switch_scene_store()
+                self.restoring_chat = True
+                self.transcript.setPlainText(transcript)
+                self.input.setPlainText(draft)
+                self.restoring_chat = False
+                self.ensure_chat()
+                self.save_chat()
+                self.note('Scene saved. This transcript now belongs to this file. Reconnect to continue.')
+            elif not same_scene(self._store_scene, hou.hipFile.path()):
+                self.switch_scene_store()
+                preferred = self.chat_store.preferred(hou.hipFile.path())
+                if preferred:
+                    self.load_chat(preferred)
+            else:
+                self.save_chat()
+
+    def switch_scene_store(self):
+        self.save_chat()
+        self.generation += 1
+        self.shutdown_process()
+        self.start_timer.stop()
+        self.stop_timer.stop()
+        self.save_timer.stop()
+        self.connected = self.busy = self.pending_reset = False
+        self.run_id = None
+        self.reopened_chat = False
+        self.resume_unavailable_chat_id = None
+        if self.chat_lease:
+            self.chat_lease.close()
+        self.chat = self.chat_lease = None
+        if not self._injected_store:
+            self.chat_store.close()
+            self.chat_store = ChatStore()
+        self._store_scene = hou.hipFile.path()
+        self.restoring_chat = True
+        self.transcript.clear()
+        self.input.clear()
+        self.restoring_chat = False
+        self.refresh_chats()
+        self.note('Chats belong only to this saved scene.' if self.chat_store.persistent else
+                  'Unsaved scene: chat is temporary and will be lost when this scene or panel closes.')
+        self.update_controls()
 
     def undo(self):
         if self.busy:
@@ -641,7 +680,7 @@ class AstraPanel(QtWidgets.QWidget):
             hou.undos.performUndo()
             self.note('Undid the last Astra edit group. The next request will read fresh scene context.')
         else:
-            self.note('Use Houdini Undo for MCP edits or intervening edits. This button only undoes a dedicated Astra edit group.')
+            self.note('Use Houdini Undo for intervening edits. This button only undoes a dedicated Astra edit group.')
 
     def fail(self, text):
         self.log.event('panel_disconnected',run_id=self.run_id,error=text)
@@ -660,8 +699,7 @@ class AstraPanel(QtWidgets.QWidget):
 
     def shutdown_process(self):
         self.log.event('connection_closing',run_id=self.run_id)
-        self.mcp_session.stop()
-        self.mcp_status.setText('Houdini MCP · disconnected')
+        self.tool_status.setText('Checked Houdini tools · disconnected')
         if self.process:
             self.process.blockSignals(True)
             self.process.closeWriteChannel()
@@ -691,6 +729,8 @@ class AstraPanel(QtWidgets.QWidget):
             hou.hipFile.removeEventCallback(self._hip_callback)
         except hou.Error:
             pass
+        if not self._injected_store:
+            self.chat_store.close()
         self.log.event('panel_closed')
         self.log.close()
 

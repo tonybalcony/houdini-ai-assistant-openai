@@ -14,17 +14,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-      - name: Install isolated environments and pinned MCP
+      - name: Install developer test dependencies with explicit consent
         shell: pwsh
-        run: ./setup.ps1 -PythonExe (Get-Command python).Source
+        run: ./setup.ps1 -PythonExe (Get-Command python).Source -DownloadDependencies
       - name: Audit tracked source and Python syntax
         run: ./.venv/Scripts/python.exe scripts/audit_release.py
-      - name: Assistant offline tests
+      - name: Offline tests (no account or model calls)
         run: ./.venv/Scripts/python.exe -m unittest discover -s tests/unit -t .
-      - name: Texture offline tests
-        run: ./.mcp-venv/Scripts/python.exe -m unittest discover -s tests/textures -t .
-      - name: Build source-only Houdini package
-        run: ./.venv/Scripts/python.exe scripts/build_plugin.py
       - name: PowerShell syntax
         shell: pwsh
         run: |
@@ -33,3 +29,5 @@ jobs:
             [System.Management.Automation.Language.Parser]::ParseFile($_.FullName, [ref]$null, [ref]$syntaxErrors) | Out-Null
             if ($syntaxErrors) { throw $syntaxErrors }
           }
+# The full offline runtime/ZIP is a separate maintainer build. Do not download
+# native executables or access a Houdini/AI account during source validation.

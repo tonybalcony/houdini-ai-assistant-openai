@@ -8,14 +8,10 @@ root = Path(__ASTRA_INSTALL_ROOT__)
 if str(root) not in sys.path:
     sys.path.insert(0, str(root))
 import importlib
-import mcp_config
-import mcp_session
 import render_jobs
 import workflow_policy
 import solaris_contracts
-import texture_contracts
 import solaris_tools
-import texture_paths
 import tool_contracts
 import scene_tools
 import apex_tools
@@ -23,13 +19,9 @@ import uthana_client
 import uthana_qt
 import uthana_scene
 import astra_panel
-importlib.reload(mcp_config)
-importlib.reload(mcp_session)
 importlib.reload(render_jobs)
 importlib.reload(workflow_policy)
 importlib.reload(solaris_contracts)
-importlib.reload(texture_contracts)
-importlib.reload(texture_paths)
 importlib.reload(solaris_tools)
 importlib.reload(tool_contracts)
 importlib.reload(scene_tools)

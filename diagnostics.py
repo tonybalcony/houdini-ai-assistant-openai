@@ -10,7 +10,7 @@ import uuid
 
 LOG_DIR_ENV = 'HOUDINI_ASTRA_LOG_DIR'
 SESSION_ENV = 'HOUDINI_ASTRA_LOG_SESSION'
-DEFAULT_DIRECTORY = Path(__file__).resolve().parent / '.logs'
+DEFAULT_DIRECTORY = Path(__file__).resolve().parent / '.state/logs'
 
 
 def redact(value):
@@ -37,7 +37,8 @@ class NullLog:
 
 class DiagnosticLog:
     def __init__(self, component, directory=None, session=None):
-        self.directory = Path(directory or os.environ.get(LOG_DIR_ENV) or DEFAULT_DIRECTORY).resolve()
+        from access_policy import plugin_path
+        self.directory = Path(directory).resolve() if directory else plugin_path('.state/logs')
         self.session = session or os.environ.get(SESSION_ENV) or uuid.uuid4().hex
         self.session = re.sub('[^a-zA-Z0-9_-]', '', self.session)[:64] or uuid.uuid4().hex
         self.path = self.directory / f'{self.session}-{component}-{os.getpid()}.jsonl'

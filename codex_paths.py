@@ -7,14 +7,6 @@ ROOT = Path(__file__).resolve().parent
 
 
 def find_codex():
-    explicit = os.environ.get('HOUDINI_ASTRA_CODEX')
-    if explicit:
-        return explicit if Path(explicit).is_file() else ''
-    found = shutil.which('codex.exe') or shutil.which('codex')
-    if found:
-        return found
-    candidates = list((Path(os.environ.get('LOCALAPPDATA', '')) / 'OpenAI/Codex/bin').glob('*/codex.exe'))
-    if candidates:
-        return str(max(candidates, key=lambda p: p.stat().st_mtime))
-    downloaded = ROOT / '.local/codex/codex-x86_64-pc-windows-msvc.exe'
+    from access_policy import contained
+    downloaded = contained(ROOT / '.runtime/codex/codex-x86_64-pc-windows-msvc.exe', ROOT)
     return str(downloaded) if downloaded.is_file() else ''

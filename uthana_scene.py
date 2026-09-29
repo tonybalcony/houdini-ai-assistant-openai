@@ -17,7 +17,8 @@ def _cached_file(asset_id):
     filename = download.get('filename', '')
     if not re.fullmatch(r'motion_(24|30|60)_[01]\.fbx', filename):
         raise ValueError('Download this motion with uthana_download first.')
-    path = cache_dir(asset_id) / filename
+    from access_policy import contained
+    path = contained(cache_dir(asset_id) / filename, cache_dir(asset_id))
     if not path.is_file():
         raise ValueError('The cached FBX is missing. Download the existing motion again.')
     return asset, path
@@ -55,8 +56,11 @@ def import_motion(asset_id, parent, name, start_frame):
     network = node(parent)
     if network.childTypeCategory() != hou.sopNodeTypeCategory():
         raise ValueError('Import inside a SOP network, for example the target character geometry object.')
+    from scene_policy import validate_factory, validate_network
+    validate_network(network)
+    validate_factory(network, 'kinefx::fbxanimimport')
     with hou.undos.group('Astra: scene edit'):
-        imported = network.createNode('kinefx::fbxanimimport', name, run_init_scripts=False)
+        imported = network.createNode('kinefx::fbxanimimport', name, run_init_scripts=False, exact_type_name=True)
         imported.parm('fbxfile').set(filename.as_posix())
         imported.parm('convertunits').set(True)
         imported.parm('convertaxis').set(True)
@@ -82,12 +86,15 @@ def import_motion(asset_id, parent, name, start_frame):
 def retarget(source_path, target_path, rig_path, skeleton_path, clip_name, mapping_mode):
     import apex
     source, target = node(source_path), node(target_path)
+    from scene_policy import validate_apex_input, validate_node, validate_factory, validate_network
+    validate_apex_input(target)
     if not isinstance(target, hou.SopNode):
         raise ValueError('target_path must be an APEX scene SOP.')
     asset_id = source.userData('astra_uthana_asset')
     _, filename = _cached_file(asset_id)
-    if source.type().name() != 'kinefx::fbxanimimport' or source.parm('fbxfile').evalAsString().replace('\\', '/') != filename.as_posix():
-        raise ValueError('Use the unmodified FBX source_path returned by houdini_uthana_import.')
+    validate_node(source, cached_motion=filename)
+    if any(source.inputs()):
+        raise PermissionError('Access denied: the motion importer must not have additional inputs.')
     if mapping_mode not in ('mappingproperty', 'matchbyxform'):
         raise ValueError('Choose mappingproperty or matchbyxform.')
     clip_name = _identifier(clip_name)
@@ -111,15 +118,18 @@ def retarget(source_path, target_path, rig_path, skeleton_path, clip_name, mappi
         suffix += 1
         clip_name = base + '_' + str(suffix)
     network = target.parent()
+    validate_network(network)
+    validate_factory(network, 'subnet')
     created = []
     with hou.undos.group('Astra: scene edit'):
-        branch = network.createNode('subnet', 'uthana_' + clip_name, run_init_scripts=False)
+        branch = network.createNode('subnet', 'uthana_' + clip_name, run_init_scripts=False, exact_type_name=True)
         branch.setInput(0, target)
         branch.setUserData('astra_uthana_asset', asset_id)
         branch.setComment('Local Uthana retarget. Original character enters input 0; no uploads. Generated clip: ' + clip_name)
         created.append(branch)
         def create(typename, name):
-            n = branch.createNode(typename, name, run_init_scripts=False)
+            validate_factory(branch, typename)
+            n = branch.createNode(typename, name, run_init_scripts=False, exact_type_name=True)
             created.append(n)
             return n
         try:
@@ -178,12 +188,18 @@ def retarget(source_path, target_path, rig_path, skeleton_path, clip_name, mappi
                         varying += max(values) - min(values) > 1e-5
             if not channels:
                 raise ValueError('No APEX control channels were produced. The rig needs control-to-joint mapping; inspect motion_to_apex and the rig mapping metadata.')
-            output = create('apex::sceneanimate', 'ANIMATE_UTHANA')
-            output.setInput(0, bake)
+            # Copy only animation data onto a checked factory-rig chain. Future
+            # APEX edits never need to evaluate the retarget branch/object_merge.
+            animation = hou.Geometry()
+            cooked.saveToGeometry(animation, '/animation/**', scene_geo)
+            validate_factory(network, 'apex::sceneanimate')
+            output = network.createNode('apex::sceneanimate', 'ANIMATE_' + clip_name,
+                                        run_init_scripts=False, exact_type_name=True)
+            created.append(output)
+            output.setInput(0, target)
+            output.parm('animation').set(animation)
             output.setDisplayFlag(True)
             output.setRenderFlag(True)
-            branch.setDisplayFlag(True)
-            branch.setRenderFlag(True)
             branch.layoutChildren()
             branch.moveToGoodPosition()
             return {'ok': True, 'branch_path': branch.path(), 'animate_path': output.path(),
@@ -191,7 +207,7 @@ def retarget(source_path, target_path, rig_path, skeleton_path, clip_name, mappi
                     'clip_name': clip_name, 'active_clip': cooked.getActiveClipPath(),
                     'frame_range': list(frame_range), 'keyed_channels': channels, 'varying_channels': varying,
                     'warnings': [w for n in created for w in n.warnings()],
-                    'note': 'Retargeted locally onto the character. Enter ANIMATE_UTHANA to review and edit. Source/target Biped Setup and Biped Retarget remain available for pose/foot adjustments.'}
+                    'note': 'Animation copied onto a checked Scene Animate output for local review/editing. The separate Biped Setup/Retarget branch remains for inspection; changes there require a new bake.'}
         except Exception as exc:
             branch.layoutChildren()
             branch.moveToGoodPosition()

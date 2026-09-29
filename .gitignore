@@ -86,3 +86,8 @@ Thumbs.db
 *.rat
 *.mp4
 *.mov
+
+# v0.6 bundled runtime (release artifact only) and private plugin state
+.runtime/
+.state/
+.astra/

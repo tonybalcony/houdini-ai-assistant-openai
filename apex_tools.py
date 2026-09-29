@@ -29,6 +29,8 @@ def _load(path):
         raise ValueError('Choose an APEX Scene Animate SOP (apex::sceneanimate).')
     if not n.inputs() or n.inputs()[0] is None:
         raise ValueError('Connect a rigged APEX scene to Scene Animate input 0 first.')
+    from scene_policy import validate_apex_input
+    validate_apex_input(n)
     geo = n.geometry()
     if n.errors():
         raise ValueError('Scene Animate cannot cook: ' + '; '.join(n.errors()))

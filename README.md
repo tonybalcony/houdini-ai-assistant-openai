@@ -1,161 +1,57 @@
 # Houdini AI Assistant (OpenAI)
 
-A conversational assistant inside Houdini that can inspect, build and edit your current scene. Chat in a Python Panel, keep conversations between sessions, animate APEX characters, and iterate on Solaris lookdev with render previews.
+An independent community assistant inside Houdini. Chat with GPT-6 Astra, GPT-5.6 Sol or GPT-5.6 Terra to inspect and edit a scene through checked tools. Choose your own ChatGPT/Codex subscription or your own OpenAI API key. There is no automatic switch between billing modes.
 
-**Version 0.5.2 - first public preview - Windows / Houdini 22**
+**0.6.0 release candidate:** self-contained Windows installation, scene-specific chats and restricted file access. This is not an official OpenAI or SideFX product.
 
-An independent community project, not an official OpenAI, SideFX or Uthana product. It uses your own accounts; model availability depends on your account.
+## Install without a terminal
 
-## Features
+1. Download the **full `houdini-ai-assistant-0.6.0.zip` plugin asset** from the release you are installing. GitHub's automatic **Source code** ZIP does not include the runtime. [Releases](https://github.com/tonybalcony/houdini-ai-assistant-openai/releases).
+2. In Houdini choose **File > Install Package Archive...**, select the ZIP and install in your own writable Houdini packages folder. Alternatively extract the ZIP there, keeping the package JSON beside the `houdini-ai-assistant-openai` folder.
+3. Restart Houdini, enable the **AI Assistant** shelf, then click **Open Assistant**.
+4. Review the setup plan and tick its consent checkbox. The plugin verifies its bundled Python, Codex and libraries. **It does not download dependencies, run pip, install Python system-wide, edit the registry or change PATH.**
+5. Choose **ChatGPT subscription** and sign in in your browser, or **API key** and enter your own key. The plugin remembers this choice. API usage is billed separately.
 
-- Explain, create, connect and edit Houdini node networks.
-- Animate exposed APEX Scene Animate controls and layers.
-- Optionally generate Uthana motion and retarget it locally onto an existing humanoid rig.
-- Create Solaris lighting and MaterialX materials, and render with Karma XPU.
-- Inspect intermediate render images with reduced-cost working settings.
-- Search local textures, download authorized files and write procedural textures.
-- Save conversations and drafts, with fresh scene inspection on reconnect.
+Required: Windows x64, Houdini 22 (development host: 22.0.368), a valid Houdini license, internet access for the selected AI service, and account access to the selected model. Rendering requires a compatible Karma XPU setup. Optional Uthana generation requires separate Uthana access/credits.
 
-| Backend | Your authentication | Billing and tools |
-|---|---|---|
-| **Subscription / Codex** (default) | ChatGPT sign-in in Codex | Shared Codex allowance; dedicated tools plus local Houdini MCP. |
-| **API / billed by tokens** | Your API key, entered in setup | Separate API billing; Agents SDK and dedicated scene/APEX/lookdev tools. |
+The ZIP is larger than 0.5.x because it includes portable Python 3.13.15, Codex 0.157.1 and 40 pinned Python distributions. Nothing downloads during setup. If bundled software is missing or corrupt, setup stops and asks you to reinstall the full ZIP; it does not silently fetch replacements.
 
-There is **no automatic switch** to API billing or another model. The selector offers GPT-6 Astra, GPT-5.6 Sol and GPT-5.6 Terra. Missing account access produces an error, not substitution.
+## What it can do
 
-## Requirements
+- Inspect scene metadata and author supported native nodes through checked operations.
+- Create Solaris lights/cameras, MaterialX materials and Karma XPU settings.
+- Run bounded working renders, inspect a WIP preview and cancel render jobs.
+- Use dedicated APEX animation tools on supported factory rigs.
+- Optionally request text-only Uthana motion, download it beside the saved scene and retarget locally when the target rig can be verified. No rig, scene or mesh is uploaded to Uthana.
 
-- Windows 10/11, 64-bit; tested with **Houdini 22.0.368** and PySide6.
-- A licensed Houdini installation. Karma XPU needs compatible hardware/drivers.
-- Internet access for installation and model use.
-- A writable installation folder with space for Python environments and Codex.
-- Subscription: a ChatGPT account with access to Codex/the selected model.
-- API: an OpenAI API key, model access and API billing.
-- Optional: your own Uthana account/credits and local texture library.
+Texture search, texture downloads/generation/binding, arbitrary Python, VEX snippets, shell execution and the upstream Houdini MCP/RPyC server were removed in 0.6.0. There is no unrestricted override. Creating unknown/custom HDAs, evaluating script-bearing networks and retargeting arbitrary custom rigs may return **Access denied**. See [the tool and storage policy](SECURITY.md).
 
-Python, dependencies and Codex are prepared by the setup window. Existing supported installations can be reused; no terminal is needed for normal installation. This release supports Windows x64 only.
+## Files and saved chats
 
-## Install the plugin
+The assistant's file operations are bounded to its installed plugin folder and the **current saved scene's `$HIP` folder**. Generated scene output belongs in `$HIP`. Private account/chat files and plugin code are not exposed as scene assets. An outside path is rejected even when supplied by the user. Relative scene filenames resolve against `$HIP`; external environment aliases, network paths and directory traversal are rejected.
 
-1. Download the **[v0.5.2 plugin ZIP](https://github.com/tonybalcony/houdini-ai-assistant-openai/releases/download/v0.5.2/houdini-ai-assistant-0.5.2.zip)** from [Releases](https://github.com/tonybalcony/houdini-ai-assistant-openai/releases). This is different from GitHub's automatic **Source code (zip)** download.
-2. In Houdini, choose **File > Install Package Archive...**, select the ZIP and choose your Houdini user **packages** folder as the installation location. Restart Houdini after installation.
-3. Enable the shelf through **shelf [+] > Shelves > AI Assistant**, then click **Open Assistant**.
-4. In the setup window, choose **ChatGPT subscription** or **OpenAI API key**, then click **Continue**. Setup downloads and verifies the required software in the background.
-5. Complete browser sign-in, or paste your own API key into the masked field. Click **Open assistant** when connected.
+| Location | Contents |
+|---|---|
+| `packages/houdini-ai-assistant-openai/.runtime/` | Bundled Python, Codex, libraries, original license notices and a SHA-256 manifest |
+| `packages/houdini-ai-assistant-openai/.state/` | This plugin's account preferences, private Codex sign-in, DPAPI-protected API key, logs and temporary files |
+| `packages/houdini-ai-assistant-openai/.state/astra.pypanel` | Generated panel registration for this installation |
+| `$HIP/.astra/<scene-id>/chats.sqlite3` | Chats and drafts for this exact scene filename |
+| `$HIP/.astra/<scene-id>/motion/` and `renders/` | Generated motion, render snapshots, job state and previews |
 
-The next time you launch from the shelf, the assistant opens and connects using the remembered setup. You do not need to sign in each time. Revoked/expired credentials can require signing in again; use **Account** in the panel to repeat setup or change the connection method.
+An untitled scene's chat stays in memory and is lost when the scene or panel closes. Saving it while the panel is open preserves its visible conversation. **Save As** opens a separate history for the new filename; the original file's chats remain with the original file. Two scenes in one directory do not share chats. Move the `.astra` directory with the project to retain history and generated files. Renaming only the scene does not rename its history.
 
-Houdini also supports dragging a package ZIP into its window. See [SideFX's package installation guide](https://www.sidefx.com/docs/houdini/ref/windows/package_browser.html).
+Subscription conversations use ephemeral Codex threads. On reconnect, up to the latest 80,000 characters of that scene's saved visible conversation are supplied as historical context on the next explicit user prompt. Hidden model reasoning and the original native Codex thread are not restored. API mode retains its serialized conversation checkpoints. Pending requests are never replayed automatically.
 
-### Install by copying files
+## Privacy and limits
 
-Extract the plugin ZIP into your Houdini user packages folder. Keep **both** items alongside one another:
+This version uses a separate plugin-local Codex profile, so you sign in once even if the desktop app is already signed in. It does not import global chats, keys or settings. Codex's native sign-in file is private but not encrypted by this plugin; the API key is protected with Windows DPAPI. Do not distribute a used installation folder. Only distribute a freshly built release ZIP.
 
-```text
-<Houdini user preferences>/packages/
-  houdini-ai-assistant.json
-  houdini-ai-assistant-openai/
-    open_panel.py
-    toolbar/astra.shelf
-    ...assistant source...
-```
+Prompts, relevant scene context and tool results go to the selected OpenAI service. This is not an offline model. Houdini and Windows still load their own runtime files. The checked tools are an application boundary, **not an OS sandbox for a malicious `.hip`, third-party plugin or another process running as you**. Long Houdini cooks can still block its UI; Stop cannot roll back completed edits.
 
-Use Houdini's Package Browser to locate the user package directory. On many Windows installations it is under `Documents/houdini22.0/packages`; OneDrive or custom preferences can change this location. [Houdini scans package JSON files directly inside that folder, not arbitrary nested repositories.](https://www.sidefx.com/docs/houdini/ref/plugins.html)
+## Updating from 0.5.x
 
-If using a Git clone or GitHub's source ZIP, name its folder **houdini-ai-assistant-openai**, place it inside packages, and copy its `houdini-ai-assistant.json` **one level up** into packages. Restart Houdini and use the same shelf/setup steps. Do not copy another person's prepared runtimes, credentials or chat history.
+Close the old assistant and install 0.6.0 into a fresh package folder. Disable the old package so only one version loads. Sign in through the new setup UI. Old global chats, downloaded textures and caches are not imported or deleted. Keep the old installation if existing scenes reference its assets. The old global chat catalogue is intentionally not offered in the scene-specific chat list.
 
-### How sign-in and setup work
+## Development
 
-- **Subscription:** Codex's native [App Server login](https://learn.chatgpt.com/docs/app-server) opens the browser. The assistant reuses an existing ChatGPT sign-in when available. Codex manages its own credentials; the assistant never stores your ChatGPT password. Subscription mode rejects API-key logins.
-- **API:** create your own key on the [OpenAI platform](https://platform.openai.com/api-keys), then paste it into setup. The key is checked without generating a response and encrypted using Windows DPAPI for the current Windows user. API usage has separate billing; ChatGPT subscriptions do not supply API credits.
-- Account preferences and the encrypted API key live in `%LOCALAPPDATA%/HoudiniAstra`. They stay outside the plugin/source folder. Existing `OPENAI_API_KEY` environment configuration still works; a key saved in setup takes precedence.
-- Setup uses signed official Python and Codex runtimes, pinned dependency versions and a checksum-verified [Houdini MCP download](THIRD_PARTY.md). It creates private environments inside the plugin folder. Nothing is installed into Houdini's embedded Python, and global Codex configuration is not rewritten.
-- First setup can take several minutes. **Open setup log** helps diagnose installation errors; **Retry** continues setup. Cancellation waits for the current installer step to finish. No model request is sent during setup.
-
-Never paste keys into chat prompts, shelf scripts, screenshots or Git commits. A `.env` file is not automatically loaded. Do not disable Windows security if a runtime is blocked; see [troubleshooting](docs/DEVELOPMENT.md#troubleshooting).
-
-## Use the assistant
-
-Open **AI Assistant > Open Assistant**, wait for Ready, then **Send** or **Ctrl+Enter**. You can select a model in the panel; switching backend/model starts a separate conversation. Use **Connect** to retry a disconnected session.
-
-For developers using a source folder outside packages, the existing Python Source Editor entry still works and now opens the same setup UI:
-
-In **Windows > Python Source Editor**, run this with the actual source folder:
-
-```python
-import runpy
-runpy.run_path(r"C:/path/to/houdini-ai-assistant-openai/open_panel.py")
-```
-
-The launcher generates an ignored, machine-local panel file automatically; no source path edits are needed.
-
-Example prompts:
-- Explain this network, then add a mountain deformation to the selected sphere.
-- Inspect this Scene Animate character and put a gentle head turn on a new override layer.
-- Bring this SOP into Solaris, build a MaterialX material, make a working XPU render and inspect its preview.
-
-**Stop** rejects queued dedicated actions; completed edits remain. It cannot interrupt every running cook or cancel an accepted Uthana job. Background renders have their own cancel tool. **Undo last edit** handles the latest dedicated Astra batch; MCP edits may need Houdini Undo.
-
-**Saved chats** restores history and drafts; click Connect to continue. **New chat** preserves earlier conversations. Changing backend/model creates a separate conversation. Save your `.hip` normally: chat persistence does not save your scene.
-
-Restart Houdini after updating the plugin. Reconnecting an existing widget does not reload its code. Keep the installation in a stable, writable location; moving it requires recreating its Python environments. There is no automatic update service.
-
-## Optional integrations
-
-**Uthana:** configure your own `UTHANA_API_KEY` environment variable or put only the key in ignored `.secrets/uthana_api_key`. Generation has separate Uthana costs. Only motion text/settings go to Uthana; your rig stays local. Retargeting needs a suitable biped and can require manual mapping. Clips span 4-10 seconds. Check cached jobs after interruptions before starting another paid generation.
-
-**Textures:** copy `local_settings.example.json` to ignored `local_settings.json` and set `texture_library` to your folder, or set `HOUDINI_ASTRA_TEXTURE_LIBRARY`. With neither configured, search uses the assistant's own cache. Library files are preserved. Automatic Fab/Epic sign-in/acquisition is not implemented; download licensed assets yourself or supply an authorized direct file URL.
-
-**Lookdev:** rendering uses Solaris/Karma XPU, lighting uses Solaris, materials use MaterialX. Working snapshots reduce resolution/samples and disable displacement/DOF/motion blur while preserving final scene settings. See [the lookdev guide](docs/LOOKDEV_AND_DIAGNOSTICS.md).
-
-## Privacy and limitations
-
-- Prompts, scene context and tool results go to the chosen model service; this is not an offline model.
-- Local chat history is unencrypted. Subscription history also needs Codex's own session storage.
-- MCP is loopback-only for a trusted local workstation, not a public server or hostile-code sandbox.
-- Tools edit live scenes. Failed batches can partially apply; save scene versions and inspect before retries.
-- Long cooks can block the UI. No general auto-rigger or world-space IK solver is supplied.
-- XPU engine execution does not itself prove GPU acceleration; drivers and devices matter.
-- macOS/Linux and other Houdini versions are not validated. Docking/focus and artistic motion quality need manual review.
-- Setup has been checked in an isolated installation folder on an existing Windows workstation. A fresh Windows OS and another person's interactive browser sign-in have not been tested.
-
-## Development and license
-
-The repository separates runtime code from development files:
-
-```text
-houdini-ai-assistant-openai/
-  README.md, VERSION, CHANGELOG.md, LICENSE
-  AGENTS.md, CONTRIBUTING.md, SECURITY.md, THIRD_PARTY.md
-  docs/                Architecture, development, lookdev and release guides
-  tests/unit/          Offline assistant tests
-  tests/textures/      Offline texture tests
-  tests/integration/   Opt-in Houdini, MCP and live checks
-  tests/support.py     Shared fixtures and host discovery
-  scripts/             Source audit and plugin builder
-  toolbar/             Houdini shelf definition
-  *.py, *.pypanel       Runtime modules and entry points
-  setup*.ps1           Developer environment setup
-  requirements*.txt    Dependency versions
-```
-
-Runtime modules stay at the plugin root to preserve Houdini imports and existing
-installations. Tests, maintenance scripts and CI configuration remain in Git but
-are excluded from the installable ZIP. Generated reports go under ignored
-`.local/checks/`. Existing local history, assets, environments and older reports
-are preserved and never bundled. Historical local reports were moved to
-`.local/archive/0.5.0-reports/`. Development is also mirrored to the owner's VPS. Public release archives contain
-only the audited plugin source and documentation.
-
-Houdini loads Python source. Developers can use `setup.ps1` with signed Python 3.13 and build a source-only package ZIP from the audited Git index:
-
-```powershell
-./setup.ps1 -PythonExe 'C:/path/to/signed/Python313/python.exe'
-& ./.venv/Scripts/python.exe -m unittest discover -s tests/unit -t .
-& ./.mcp-venv/Scripts/python.exe -m unittest discover -s tests/textures -t .
-& ./.venv/Scripts/python.exe scripts/build_plugin.py
-```
-
-These tests make no model calls. See [DEVELOPMENT.md](docs/DEVELOPMENT.md) for native checks, live-test costs and diagnostics; [AGENTS.md](AGENTS.md) and [ARCHITECTURE.md](docs/ARCHITECTURE.md) for implementation guidance.
-
-See [CHANGELOG.md](CHANGELOG.md), [CONTRIBUTING.md](CONTRIBUTING.md), [SECURITY.md](SECURITY.md) and [THIRD_PARTY.md](THIRD_PARTY.md). Original code is licensed under [MIT](LICENSE).
+See [Development](docs/DEVELOPMENT.md), [Architecture](docs/ARCHITECTURE.md), [agent guidance](AGENTS.md) and [release checklist](docs/RELEASE_CHECKLIST.md). Original project code is MIT; bundled software keeps its own licenses, described in [THIRD_PARTY.md](THIRD_PARTY.md).

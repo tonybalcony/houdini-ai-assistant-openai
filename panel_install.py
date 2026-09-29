@@ -7,7 +7,8 @@ def prepare_panel(root):
     template = (root / 'astra.pypanel').read_text(encoding='utf-8')
     if template.count('__ASTRA_INSTALL_ROOT__') != 1:
         raise ValueError('Invalid Astra panel template.')
-    target = root / '.local' / 'astra.pypanel'
+    from access_policy import contained
+    target = contained(root / '.state' / 'astra.pypanel', root)
     target.parent.mkdir(exist_ok=True)
     target.write_text(template.replace('__ASTRA_INSTALL_ROOT__', repr(str(root))), encoding='utf-8')
     return target

@@ -62,34 +62,57 @@ def apply(operations):
                 if action == 'create':
                     from workflow_policy import validate_creation
                     validate_creation(op['type'],op['parent'])
+                    from scene_policy import validate_type, validate_factory, validate_network
+                    validate_network(node(op['parent']))
+                    validate_type(op['type'], node(op['parent']).childTypeCategory().name())
+                    validate_factory(node(op['parent']), op['type'])
                     n = node(op['parent']).createNode(op['type'], op.get('name'),
-                                                      run_init_scripts=False)
+                                                      run_init_scripts=False, exact_type_name=True)
                     result = summary(n)
                 elif action == 'set_parameters':
                     n = node(op['path'])
+                    from scene_policy import validate_node
+                    validate_node(n)
                     for entry in op['parameters']:
                         key, value = entry['name'], entry['value']
                         p = n.parmTuple(key) if isinstance(value, list) else n.parm(key)
                         if p is None:
                             raise ValueError('Unknown parameter: ' + key)
+                        from scene_policy import validate_parameter
+                        validate_parameter(p, value)
                         p.set(value)
                     result = summary(n)
                 elif action == 'connect':
                     n = node(op['path'])
                     source = node(op['source']) if op.get('source') else None
+                    from scene_policy import validate_cook
+                    validate_cook(n)
+                    if source:
+                        validate_cook(source)
                     n.setInput(int(op.get('input', 0)), source, int(op.get('output', 0)))
                     result = summary(n)
                 elif action == 'display':
                     n = node(op['path'])
+                    from scene_policy import validate_cook
+                    validate_cook(n)
                     n.setDisplayFlag(True)
                     if hasattr(n, 'setRenderFlag'):
                         n.setRenderFlag(True)
                     result = summary(n)
                 elif action == 'layout':
-                    node(op['path']).layoutChildren()
+                    from scene_policy import validate_network, validate_node
+                    parent = node(op['path'])
+                    validate_network(parent)
+                    for child in parent.children():
+                        validate_node(child)
+                    parent.layoutChildren()
                     result = {'path': op['path']}
                 elif action == 'select':
                     n = node(op['path'])
+                    from scene_policy import validate_cook
+                    validate_cook(n)
+                    for selected in hou.selectedNodes():
+                        validate_cook(selected)
                     n.setSelected(True, clear_all_selected=True)
                     result = summary(n)
                 else:
@@ -120,7 +143,7 @@ def call(name, args):
                 if query in k.lower() or query in v.description().lower()][:100]
     if name == 'houdini_edit':
         return apply(args['operations'])
-    if name.startswith('houdini_solaris_') or name == 'houdini_materialx_textures':
+    if name.startswith('houdini_solaris_'):
         import solaris_tools
         return solaris_tools.call(name, args)
     if name in ('houdini_uthana_import', 'houdini_uthana_retarget'):
@@ -133,6 +156,8 @@ def call(name, args):
         return apex_tools.keyframes(**args)
     if name == 'houdini_geometry':
         n = node(args['path'])
+        from scene_policy import validate_cook
+        validate_cook(n)
         if not isinstance(n, hou.SopNode):
             raise ValueError('Geometry inspection requires a SOP node.')
         geo = n.geometry()

@@ -18,7 +18,8 @@ if subscription:
     report['backend'] = 'Codex App Server / ChatGPT subscription'
 checks = report['checks']
 chat_directory = tempfile.TemporaryDirectory(prefix='astra-sdk-check-')
-chat_store = ChatStore(chat_directory.name)
+hou.hipFile.save(str(Path(chat_directory.name) / 'scene.hipnc'))
+chat_store = ChatStore()
 
 
 def edit(ops):

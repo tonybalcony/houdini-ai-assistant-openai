@@ -6,7 +6,7 @@ import subprocess
 import sys
 import threading
 import time
-from render_jobs import job_dir,write_state
+from render_jobs import job_dir,write_state,validate_launch_state
 from diagnostics import DiagnosticLog,redact
 
 
@@ -18,7 +18,7 @@ def main(job_id):
     process = None
     tail = []
     try:
-        output = Path(state['output'])
+        output = validate_launch_state(directory, state)
         if output.exists():
             raise ValueError('Output appeared before render launch; refusing to overwrite it.')
         snapshots=directory/'snapshots'

@@ -30,7 +30,7 @@ class SavedChatTests(unittest.TestCase):
         other = reopened.create('C:/scenes/run.hip', 'subscription', MODEL)
         reopened.set_active(other['id'])
         self.assertEqual(reopened.preferred('C:/scenes/walk.hip'), self.chat_id)
-        self.assertEqual(reopened.preferred('C:/scenes/unknown.hip'), other['id'])
+        self.assertIsNone(reopened.preferred('C:/scenes/unknown.hip'))
 
     def test_two_panels_cannot_own_same_chat(self):
         lease = ChatLease(self.store, self.chat_id)
@@ -48,7 +48,7 @@ class SavedChatTests(unittest.TestCase):
         bridge.new_thread()
         request = rpc[-1]
         self.assertEqual(request['method'], 'thread/start')
-        self.assertFalse(request['params']['ephemeral'])
+        self.assertTrue(request['params']['ephemeral'])
         bridge.receive({'id': request['id'], 'result': {'thread': {'id': 'durable-thread'}, 'model': MODEL}})
         self.assertIsNone(self.store.get(self.chat_id)['codex_thread_id'])
         self.assertTrue(bridge.ready)
@@ -57,16 +57,16 @@ class SavedChatTests(unittest.TestCase):
         self.assertEqual(rpc[-1]['method'], 'thread/start')
         self.assertFalse(any(r.get('method') == 'turn/start' for r in rpc))
 
-    def test_first_user_turn_records_thread_before_submission(self):
+    def test_subscription_turn_does_not_persist_native_thread(self):
         events, rpc = [], []
         bridge = CodexBridge(events.append, rpc.append, chat_store=self.store, chat_id=self.chat_id)
         bridge.thread_id = 'durable-thread'
         bridge.run_id = 'first-turn'
         bridge.start_turn({'text': 'inspect the scene'}, {})
         self.assertEqual(rpc[-1]['method'], 'turn/start')
-        self.assertEqual(self.store.get(self.chat_id)['codex_thread_id'], 'durable-thread')
+        self.assertIsNone(self.store.get(self.chat_id)['codex_thread_id'])
         resumed = CodexBridge(events.append, rpc.append, chat_store=self.store, chat_id=self.chat_id)
-        self.assertEqual(resumed.resume_thread_id, 'durable-thread')
+        self.assertIsNone(resumed.resume_thread_id)
 
     def test_explicit_reset_does_not_restore_previous_thread_on_reopen(self):
         self.store.update(self.chat_id, codex_thread_id='previous-thread')
@@ -78,37 +78,17 @@ class SavedChatTests(unittest.TestCase):
         self.assertIsNone(self.store.get(self.chat_id)['codex_thread_id'])
         self.assertIsNone(bridge.resume_thread_id)
 
-    def test_codex_resume_restores_id_and_refreshes_mcp_port(self):
-        self.store.update(self.chat_id, codex_thread_id='durable-thread')
-        events, rpc = [], []
-        bridge = CodexBridge(events.append, rpc.append, mcp_port=43219,
-                             chat_store=self.store, chat_id=self.chat_id)
-        bridge.new_thread()
-        request = rpc[-1]
-        self.assertEqual(request['method'], 'thread/resume')
-        self.assertEqual(request['params']['threadId'], 'durable-thread')
-        self.assertIn('43219', str(request['params']['config']))
-        self.assertNotIn('dynamicTools', request['params'])
-        self.assertNotIn('ephemeral', request['params'])
-        bridge.receive({'id': request['id'], 'error': {'message': 'thread not found'}})
-        self.assertTrue(bridge.closed)
-        self.assertEqual(self.store.get(self.chat_id)['codex_thread_id'], 'durable-thread')
-        self.assertFalse(any(r.get('method') == 'thread/start' for r in rpc))
-        self.assertEqual(events[-1]['code'], 'chat_resume_unavailable')
 
-    def test_missing_rollout_preserves_draft_and_does_not_replay(self):
-        self.store.update(self.chat_id, codex_thread_id='other-pc-thread',
-                          draft='Do not automatically send this', transcript='Previous conversation')
-        events, rpc = [], []
-        bridge = CodexBridge(events.append, rpc.append, chat_store=self.store, chat_id=self.chat_id)
-        bridge.new_thread()
-        bridge.receive({'id': rpc[-1]['id'], 'error': {'message': 'no rollout found for thread id other-pc-thread'}})
-        record = self.store.get(self.chat_id)
-        self.assertEqual(record['draft'], 'Do not automatically send this')
-        self.assertEqual(record['transcript'], 'Previous conversation')
-        self.assertEqual(record['codex_thread_id'], 'other-pc-thread')
-        self.assertEqual(events[-1]['code'], 'chat_resume_unavailable')
-        self.assertEqual([r['method'] for r in rpc], ['thread/resume'])
+
+    def test_first_save_restores_api_visible_context_without_draft_or_replay(self):
+        chat = self.store.create('scene.hip', 'api', MODEL)
+        self.store.update(chat['id'], transcript='User: make a box\nAstra: done', draft='do not send this')
+        events = []
+        worker = Worker(events.append, chat_store=self.store, chat_id=chat['id'])
+        self.assertIn('make a box', worker.history[0]['content'])
+        self.assertIn('do not replay', worker.history[0]['content'])
+        self.assertNotIn('do not send this', str(worker.history))
+        self.assertFalse(events)
 
     def test_api_recovers_full_tool_history_without_replaying(self):
         chat = self.store.create('scene.hip', 'api', MODEL)

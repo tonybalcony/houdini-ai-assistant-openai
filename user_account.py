@@ -7,8 +7,8 @@ from pathlib import Path
 
 
 def user_dir():
-    return Path(os.environ.get('HOUDINI_ASTRA_USER_DIR') or
-                Path(os.environ.get('LOCALAPPDATA', Path.home())) / 'HoudiniAstra')
+    from access_policy import plugin_path
+    return plugin_path('.state/account')
 
 
 def preferences():

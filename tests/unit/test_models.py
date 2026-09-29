@@ -6,17 +6,16 @@ from tool_contracts import MODELS, MODEL
 
 
 class ModelTests(unittest.TestCase):
-    def test_codex_routes_all_models_and_keeps_mcp(self):
+    def test_codex_routes_all_models_and_disables_ambient_mcp(self):
         for model in MODELS:
             with self.subTest(model=model):
                 events, rpc = [], []
-                bridge = CodexBridge(events.append, rpc.append, mcp_port=19999, model=model)
+                bridge = CodexBridge(events.append, rpc.append, model=model)
                 bridge.new_thread()
                 self.assertEqual(rpc[-1]['params']['model'], model)
-                self.assertIn('mcp_servers.houdini', rpc[-1]['params']['config'])
+                self.assertEqual(rpc[-1]['params']['config']['mcp_servers'], {})
                 self.assertFalse(rpc[-1]['params']['allowProviderModelFallback'])
                 bridge.thread_ready({'thread': {'id': 't'}, 'model': model}, False)
-                bridge.mcp_ready({'structuredContent': {'status': 'success'}}, False)
                 self.assertEqual(events[-1]['model'], model)
 
     def test_api_agent_uses_selected_model_and_same_tools(self):

@@ -1,140 +1,21 @@
-# Release review - 0.5.2 connection recovery
+# Release review — 0.6.0 candidate
 
-Prepared 2026-09-27. The owner approved initial public GitHub publication on this date.
-The VPS remains a development mirror; only audited source is published.
+The owner requested the contained installer and explicitly chose checked tools over unrestricted execution. No new publication is implied by this refactor. Existing GitHub release: 0.5.2.
 
-## Repository
+- [x] Remove texture tools and upstream unrestricted MCP/RPyC integration.
+- [x] Bundle portable Python/Codex/libraries; no first-run downloads or OS installer.
+- [x] Add explicit setup consent and document every assistant storage location.
+- [x] Isolate account state inside the plugin; no global sign-in/history migration.
+- [x] Per-saved-scene chats; untitled chats in memory; project-local render/motion caches.
+- [x] Enforce direct path and checked scene-operation boundaries; no bypass mode.
+- [x] Offline suite: 71 tests passed (one Windows symlink-permission skip); separate Windows junction escape test passed. Native Codex initialized in an empty private test profile without account/model calls.
+- [x] Staged source and full Git history credential scans: no findings. Index/source audit: no findings. Full ZIP content and runtime SHA-256 audit: passed; no private state included.
+- [x] Native source tests: setup consent/retry/cancel, panel chat restore, first Save/Save As/load/untitled discard, checked edits and denial cases, SDK bridge and APEX/focus regressions.
+- [x] Extracted full package: 3,973 runtime file hashes, Python/Codex signatures, relocated imports, offline setup, native package/shelf discovery, consent UI, scene chat and checked geometry. No sign-in/model request performed.
+- [ ] Test new human subscription/API sign-in on a separate Windows installation.
+- [x] Native Houdini 22.0.368: factory Electra APEX keys; cached Uthana import/retarget (442 keyed/299 varying channels) and safe output reinspection; Solaris/MaterialX/lights/camera; completed Karma XPU render; WIP image available before completion and cancellation; API worker image bridge without API calls.
+- [ ] Obtain approval before publishing the new release/tag.
 
-- GitHub slug: `houdini-ai-assistant-openai`
-- README title: **Houdini AI Assistant (OpenAI)**
-- Visibility: public (approved by the owner)
-- License: MIT (selected by the owner)
-- Default branch: `main`
-- Root: this assistant directory, not the surrounding Houdini workspace
-- GitHub: https://github.com/tonybalcony/houdini-ai-assistant-openai
-- VPS mirror remains configured separately as `vps`.
+Validation resumed on 2026-09-30 after the owner fixed the Houdini license. Native tests above now pass. Houdini's existing external OCIO setting reports a missing configuration in the host; spawned render workers no longer inherit that external setting and use versioned preferences inside the plugin. Windows render-state publication retries brief reader locks instead of aborting the render. These checks do not validate every custom rig, live docked-pane focus on another PC or fresh online sign-in with a second person's account. No paid model requests or new Uthana generations were made for this refactor.
 
-```text
-houdini-ai-assistant-openai/
-  README.md, LICENSE, VERSION, CHANGELOG.md
-  AGENTS.md
-  docs/ARCHITECTURE.md, docs/DEVELOPMENT.md
-  CONTRIBUTING.md, SECURITY.md, THIRD_PARTY.md
-  docs/LOOKDEV_AND_DIAGNOSTICS.md, docs/RELEASE_CHECKLIST.md
-  .gitignore, .gitattributes
-  .github/workflows/validate.yml
-  scripts/audit_release.py, scripts/build_plugin.py
-  houdini-ai-assistant.json, toolbar/astra.shelf
-  launch_ui.py, setup_ui.py, bootstrap.py
-  account_worker.py, user_account.py, codex_paths.py
-  setup.ps1, setup_mcp.ps1, setup_common.ps1
-  install_mcp_source.py
-  requirements*.txt
-  local_settings.example.json
-  open_panel.py, panel_install.py, astra.pypanel
-  astra_panel.py, codex_worker.py, worker.py
-  *_tools.py, *_contracts.py, mcp_*.py
-  chat_store.py, diagnostics.py, runtime_settings.py
-  texture_*.py, uthana_*.py, render_*.py, asset_worker.py
-  tests/unit/, tests/textures/, tests/integration/, tests/support.py
-```
-
-The flat Python layout preserves the existing Houdini import architecture. The
-installable source-only ZIP places the package JSON at its root beside the source
-folder. It supplies an AI Assistant shelf and first-run setup/sign-in UI. Prepared
-runtimes are downloaded on each user's machine and excluded from the archive.
-
-## What is included
-
-Original source, scripts, public documentation, MIT license, versioned dependency
-lists, empty configuration example, synthetic-fixture tests and a Windows CI workflow.
-
-## What stays private/local
-
-- All keys/credentials, .secrets, environment files, Codex auth/session state.
-- Chat history, logs, render jobs, downloaded motion/textures and local settings.
-- Python installations/environments, downloaded vendor source and generated protocol dumps.
-- Houdini scenes/geometry, renders/media, backups, caches, screenshots and validation output.
-- Historical machine-specific lessons/reports and sibling workspace files.
-
-Ignore rules protect these categories, and the source audit inspects only staged
-release content. Ignored credential files are not opened or copied to the audit
-directory. Gitleaks scans the staged source export and Git history with redaction.
-Ignore rules alone are not a substitute for reviewing the exact commit contents.
-
-## Baseline verification from 0.5.0
-
-- Fresh local clone with no runtime environments, vendor tree, credentials, chat history
-  or private texture settings: full setup succeeded using signed Python 3.13.15.
-- Both freshly installed dependency environments: `pip check` passed.
-- Baseline offline suite: **67 tests passed**, including dummy-key Windows DPAPI,
-  account protocol, install failure/cancellation and packaging boundaries.
-- Native Houdini 22.0.368: saved-chat/Qt, scene editing, Stop/stale-call guards and
-  APEX animation/focus checks passed in disposable processes.
-- Native Solaris/MaterialX authoring: passed with synthetic textures.
-- Codex ChatGPT sign-in and live MCP tool operations: passed without a model turn;
-  46 exposed tools, node edits, Python execution, lookdev tools and reconnect verified.
-- The same user's installed Houdini license and Codex sign-in were used; no account
-  state was copied into Git. A different user's account and a clean Windows OS were
-  not available to test.
-- A local OCIO-profile warning appeared during native checks; checks completed.
-  No user color settings were changed or included in the repository.
-- Remote GitHub Actions has not run yet; its commands were validated locally.
-- New renders/image transport, paid API/model calls and Uthana generation were not
-  rerun for this packaging change. The MCP image check explicitly reported skipped.
-  Existing render/animation behavior is unchanged.
-- Plugin ZIP extracted into a separate packages directory: Houdini discovered its
-  package root, shelf and tool. Qt setup retry/cancel, masked key, saved backend and
-  future launch without onboarding passed in a disposable Houdini process.
-- First-run bootstrap installed fresh worker/MCP environments and the complete
-  pinned portable Codex runtime from a checksum-verified cached official archive;
-  Windows signature checks passed. It reused an existing signed Python 3.13.15 base.
-- The portable Codex runtime recognized the existing ChatGPT account through the
-  new account helper. Native MCP edits, Solaris/MaterialX, procedural textures,
-  46-tool inventory and reconnect passed from that separate installation.
-- Browser login protocol success was tested with a simulated App Server. A new
-  human browser sign-in, real API-key entry and the no-existing-Python bootstrap
-  branch have not been tested on a fresh Windows OS. No user account was changed.
-
-## 0.5.1 cleanup validation
-
-- Offline discovery passed: 62 assistant tests and 5 texture tests.
-- Native Qt onboarding and Solaris authoring passed using the relocated module entry points.
-- Native MCP check passed with 46 tools and the relocated child-process entry point; no model turn or render was requested.
-- The 60-file plugin ZIP matches the staged runtime/documentation source and excludes tests, maintenance scripts and CI configuration.
-- Native Houdini loaded the slim archive, registered its shelf and reached first-run setup without developer files.
-- Source syntax, documentation links and the staged-source credential scan passed.
-- Fourteen historical local reports were archived without deletion; ignored user assets, chats and credentials remain local.
-- Version label: v0.5.1; destination remains the owner's VPS Git repository, with no GitHub publication.
-
-## Before any future GitHub publication
-
-- [x] Owner approves this structure, slug and public visibility.
-- [x] Owner authenticated as `tonybalcony` and selected the personal account.
-- [x] Installed checksum-verified GitHub CLI on the VPS; owner completed browser sign-in.
-- [ ] Recheck clean Git status, source/history scans and exact commit list.
-- [ ] Create an empty GitHub repository, set origin and push main.
-- [ ] Verify remote HEAD equals local HEAD and review the remote tree/README/license.
-- [ ] Check the first CI run and enable private vulnerability reporting if desired.
-- [ ] Publish the existing v0.5.2 tag and its verified source-only plugin ZIP.
-- [ ] Attach the audited plugin ZIP as a release download so users can install through Houdini's UI.
-
-## Ongoing limitations
-
-Windows/Houdini 22 is the tested target. Both billing modes require each user's own
-account/model access. Uthana is optional and separately billed. Fab acquisition is
-manual, arbitrary rigs can need mapping, and XPU does not guarantee every GPU driver
-works. See the README and architecture guide.
-
-The upstream MCP archive declares MIT in package metadata but lacks a standalone
-license notice; source is fetched from upstream rather than redistributed here.
-See THIRD_PARTY.md. Dependency vulnerabilities have not been fully audited.
-
-## 0.5.2 recovery validation
-
-The real Codex idle connect/close/reopen check reproduced the older missing-rollout
-behavior without model requests; the updated path reconnected successfully and
-preserved the unsent draft. Native Qt tested explicit recovery while retaining the
-old transcript/draft. Unit coverage verifies resume errors never replay prompts,
-first-turn checkpointing and explicit reset behavior. No account credentials or
-other users' histories were inspected.
+Source remains MIT and text-only. The full artist ZIP adds `.runtime` under its source folder. No `.state`, accounts, scenes, chat history, caches, downloaded user assets or maintainer machine settings may enter the ZIP.

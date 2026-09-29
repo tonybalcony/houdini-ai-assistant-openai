@@ -1,40 +1,9 @@
-# Third-party dependencies
+# Third-party software
 
-The project MIT license applies to this repository's original source. It does not
-relicense Houdini, Codex, model services, downloaded assets or external dependencies.
-No credentials, binary runtimes, third-party assets or upstream source archives are
-included in this repository.
+The MIT license applies to original project code only. It does not relicense Houdini, Codex, model services, assets or dependencies.
 
-## Houdini MCP
+The 0.6 artist ZIP includes portable Python 3.13.15, the official OpenAI Codex Windows x64 runtime 0.157.1 and 40 exact-version Python distributions from `requirements-lock.txt`. Binaries remain excluded from Git. Original Python license text, Codex LICENSE/NOTICE and Python distribution license metadata are retained in `.runtime`. `manifest.json` records original download URLs, archive/wheel hashes and shipped-file hashes. Unused pip CLI launchers and local download-origin metadata are omitted.
 
-Setup downloads [oculairmedia/houdini-mcp](https://github.com/oculairmedia/houdini-mcp)
-at revision `7e5cd7a2484b899a6e9251c6f7b90228c2ec7990` into the ignored `vendor/`
-directory. The archive's SHA-256 is pinned in `install_mcp_source.py`. The upstream
-Python sources are unmodified; project extensions live in `mcp_extensions.py`.
+[Codex source and release](https://github.com/openai/codex/releases/tag/rust-v0.157.1) and [Python](https://www.python.org/) have their own licenses. The upstream Houdini MCP package is no longer downloaded, executed or redistributed. The Python MCP libraries that remain are transitive Agents SDK dependencies; they do not start a Houdini MCP server.
 
-The pinned upstream `pyproject.toml` declares MIT. That revision does not contain a
-standalone license/copyright notice. We link to and fetch the original upstream
-project rather than redistributing a reconstructed license or vendor copy.
-Consult upstream before separately redistributing its source. Its own metadata and
-attribution remain in the downloaded source tree.
-
-## Python dependencies and services
-
-The optional first-run bootstrap fetches official Python **3.13.15** from python.org
-and, when no Codex installation is discovered, the Windows x64 package from
-[OpenAI Codex rust-v0.157.1](https://github.com/openai/codex/releases/tag/rust-v0.157.1).
-Artifact URLs and SHA-256 values live in `bootstrap.py`; Windows publisher signatures
-are checked before use. The complete Codex runtime folder is preserved, including
-its supporting resources. These downloads are local installation data, not tracked
-source or contents of the distributed plugin ZIP. Their original licenses apply.
-
-`requirements-lock.txt` and `requirements-mcp-lock.txt` record tested dependency
-versions, including OpenAI/Agents SDK, FastMCP, RPyC, HTTPX and Pillow. Packages are
-installed from the package index and retain their respective licenses; consult their
-installed distribution metadata. Version locks do not constitute a license or
-vulnerability audit and do not pin artifact hashes.
-
-Houdini and Karma require a SideFX installation/license. Codex subscription access,
-OpenAI API access and Uthana access are supplied by each user and have separate
-terms and billing. Megascans/Fab assets must be obtained and used under the user's
-applicable license; none are shipped as examples or fixtures.
+Houdini/Karma require a SideFX license. Each user supplies their own subscription/API access, with separate billing. Uthana is optional and separately licensed/billed; no generated assets are shipped. Dependencies retain their own terms. Pinning and artifact hashes are not a completed license or vulnerability audit.

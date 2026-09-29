@@ -13,6 +13,7 @@ from PySide6 import QtCore, QtWidgets
 from shiboken6 import isValid
 import launch_ui
 import setup_ui
+import user_account
 from astra_panel import AstraPanel
 from chat_store import ChatStore
 from user_account import remember_backend
@@ -30,7 +31,7 @@ def spin_until(predicate,timeout=5):
 
 
 with tempfile.TemporaryDirectory(prefix='astra-setup-ui-') as directory, \
-     patch.dict(os.environ,{'HOUDINI_ASTRA_USER_DIR':directory}):
+     patch.object(user_account,'user_dir',return_value=Path(directory)):
     dialog=setup_ui.SetupDialog()
     dialog.show()
     app.processEvents()
@@ -42,6 +43,9 @@ with tempfile.TemporaryDirectory(prefix='astra-setup-ui-') as directory, \
     dialog.backend.setCurrentIndex(1)
     assert dialog.key.isVisible()
     assert dialog.key.echoMode()==QtWidgets.QLineEdit.EchoMode.Password
+    dialog.advance()
+    assert 'consent' in dialog.status.text()
+    dialog.consent.setChecked(True)
     dialog.advance()
     assert 'Enter your own' in dialog.status.text()
 
@@ -103,7 +107,8 @@ with tempfile.TemporaryDirectory(prefix='astra-setup-ui-') as directory, \
     # Cancellation waits for the installer thread before allowing dialog destruction.
     dialog=setup_ui.SetupDialog()
     dialog.backend.setCurrentIndex(0)
-    def cancellable(backend,progress,cancel):
+    dialog.consent.setChecked(True)
+    def cancellable(backend,progress,cancel,**kwargs):
         cancel.wait(3)
         raise RuntimeError('cancelled')
     with patch.object(setup_ui.bootstrap,'setup',side_effect=cancellable):

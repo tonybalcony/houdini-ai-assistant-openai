@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.0 — contained installation and scene chats (release candidate)
+
+- Bundle portable signed Python 3.13.15, Codex 0.157.1 and pinned libraries in the plugin ZIP. First launch verifies local files after explicit consent; no pip, downloads, registry edits or system installation.
+- Keep account settings, a separate Codex profile, logs and temporary files inside the plugin. Existing global sign-ins and settings are not imported.
+- Save chats beside each saved scene in its own `$HIP/.astra/<scene-id>/` directory. Unsaved chats remain in memory. Save As starts a separate scene history.
+- Use ephemeral subscription threads, restoring the saved visible conversation as historical context on the next explicit prompt. No hidden Codex conversation archive is persisted.
+- Remove texture search, download, generation and binding tools, external texture-library configuration and the upstream Houdini MCP/RPyC server.
+- Route both backends through checked Houdini tools. Disable arbitrary Python/shell execution, Codex file/browser/app tools and tool installation. Reject outside paths and unsupported node/cook operations with Access denied.
+- Store motion and render files beside the saved scene. Require a saved scene before generating motion or starting a render. Preserve Solaris, MaterialX and Karma XPU conventions.
+- Custom HDAs, script nodes and unverified APEX rigs are unsupported under this policy; no unrestricted override exists.
+
 ## 0.5.2 - saved-chat connection recovery (2026-09-27; VPS Git only)
 
 - Do not save a Codex resume ID for an unused connection; save it before the first user turn.

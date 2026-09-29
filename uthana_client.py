@@ -12,7 +12,12 @@ import urllib.parse
 import urllib.request
 
 ROOT = Path(__file__).resolve().parent
-CACHE = ROOT / 'motion_cache'
+CACHE = None  # Production cache belongs to the current saved scene.
+
+
+def cache_root():
+    from access_policy import project_data
+    return CACHE if CACHE is not None else project_data('motion')
 CHARACTER = 'cXi2eAP19XwQ'  # Uthana's built-in Tar; never a user's uploaded rig.
 API = 'https://uthana.com/graphql'
 REMOTE_TOOLS = {'uthana_generate', 'uthana_status', 'uthana_download', 'uthana_cached_motions'}
@@ -33,7 +38,8 @@ def api_key():
 def cache_dir(asset_id):
     if not isinstance(asset_id, str) or not re.fullmatch(r'[a-f0-9]{24}', asset_id):
         raise ValueError('Use an asset_id returned by the Uthana tools.')
-    return CACHE / asset_id
+    from access_policy import contained
+    return contained(cache_root() / asset_id, cache_root())
 
 
 def read_asset(asset_id):
@@ -213,7 +219,7 @@ class Client:
 
 def cached_motions():
     result = []
-    for path in sorted(CACHE.glob('*/asset.json'), key=lambda p: p.stat().st_mtime, reverse=True)[:20]:
+    for path in sorted(cache_root().glob('*/asset.json'), key=lambda p: p.stat().st_mtime, reverse=True)[:20]:
         asset = read_asset(path.parent.name)
         result.append({k: asset[k] for k in ('asset_id', 'prompt', 'status', 'model', 'seconds', 'download', 'job_id', 'error') if k in asset})
     return {'motions': result}

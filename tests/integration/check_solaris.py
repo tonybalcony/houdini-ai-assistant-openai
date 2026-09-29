@@ -10,6 +10,7 @@ import solaris_tools as tools
 from pxr import Usd,UsdShade
 
 app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
+hou.hipFile.save(str(ARTIFACTS / 'solaris-test.hipnc'))
 root = hou.node('/obj').createNode('geo','SOLARIS_CHECK',run_init_scripts=False)
 box = root.createNode('box')
 stage = hou.node('/stage')
@@ -24,13 +25,6 @@ def create(name, **config):
 
 create('import_check',kind='import_sop',source_path=box.path(),prim_path='/World/box')
 material = create('blue_material',kind='material',prim_pattern='/World/box',base_color=[.02,.2,.8],roughness=.35,metalness=.2)
-from tests.support import synthetic_textures
-asset=synthetic_textures()
-textures=tools.call('houdini_materialx_textures',{'shader_path':material['shader_path'],
-    'base_color_file':asset['albedo'],'roughness_file':asset['roughness'],
-    'metalness_file':'','normal_file':asset['normal'],
-    'displacement_file':asset['displacement'],'displacement_scale':.05})
-assert textures['status']=='success',textures
 create('key_light',kind='light',light_type='dome',position=[0,0,0],rotation=[0,0,0],color=[1,1,1],intensity=1,exposure=0)
 create('rect_light',kind='light',light_type='rect',position=[2,3,4],rotation=[-30,20,0],color=[1,1,1],intensity=1,exposure=2)
 cam = create('render_camera',kind='camera',position=[0,0,5],rotation=[0,0,0],focal_length=50)
@@ -45,8 +39,6 @@ copy = Usd.Stage.Open(usd.Flatten())
 tools.optimize_working_stage(copy,karma['render_settings'])
 settings = copy.GetPrimAtPath(karma['render_settings'])
 attrs = {a.GetName():str(a.Get()) for a in settings.GetAttributes() if any(w in a.GetName() for w in ('sample','engine','limit','resolution','delegate'))}
-assert not copy.GetPrimAtPath(material['material_path']).GetAttribute('outputs:mtlx:displacement').GetConnections()
-assert usd.GetPrimAtPath(material['material_path']).GetAttribute('outputs:mtlx:displacement').GetConnections()
 assert settings.GetAttribute('karma:object:reflectlimit').Get()<=2
 assert settings.GetAttribute('karma:object:refractlimit').Get()<=2
 assert max(settings.GetAttribute('resolution').Get())<=960

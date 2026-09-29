@@ -39,25 +39,3 @@ def isolated_chat_store():
     store = ChatStore(temporary.name)
     store._test_directory = temporary
     return store
-
-
-def synthetic_textures():
-    """Create four tiny maps using the existing helper; never access a private library."""
-    from codex_worker import subscription_environment
-    prefix = 'validation_' + uuid.uuid4().hex
-    colors = {'albedo': [.2,.4,.7], 'roughness': [.5,.5,.5],
-              'normal': [.5,.5,1], 'displacement': [.5,.5,.5]}
-    result = {'query': prefix}
-    for role, color in colors.items():
-        request = {'name':'texture_write', 'arguments':{
-            'name':prefix+'_'+role+'.png','pattern':'solid','size':32,
-            'color_a':color,'color_b':color,'scale':4,'seed':0}}
-        output = subprocess.run([str(ROOT/'.mcp-venv/Scripts/python.exe'),str(ROOT/'asset_worker.py')],
-            input=json.dumps(request),capture_output=True,text=True,encoding='utf-8',
-            env=subscription_environment(os.environ),check=True,timeout=30,
-            creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0))
-        data = json.loads(output.stdout)
-        if data.get('status') != 'success':
-            raise RuntimeError('Synthetic texture creation failed: ' + str(data.get('error','unknown')))
-        result[role] = data['path']
-    return result

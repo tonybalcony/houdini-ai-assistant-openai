@@ -1,114 +1,26 @@
-# Guide for coding agents
+# Coding-agent guide — 0.6.0
 
-This is a Windows Houdini Python Panel application distributed as a source-only
-Houdini package archive, not a web service. Commands below assume this directory is the working
-directory. Tested host: Houdini 22.0.368, PySide6, Python 3.13.
+This repository is a Windows Houdini panel plus portable local workers. Read [Architecture](docs/ARCHITECTURE.md), [Development](docs/DEVELOPMENT.md), [Security](SECURITY.md) and [Release checklist](docs/RELEASE_CHECKLIST.md).
 
-Read [ARCHITECTURE.md](docs/ARCHITECTURE.md) for module ownership and process boundaries,
-[DEVELOPMENT.md](docs/DEVELOPMENT.md) for setup/tests, and
-[RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) before preparing a public repository.
-`README.md` is the public user guide. Historical local lessons/reports are excluded
-from Git; they are not current implementation specifications.
+## Decisions to preserve
 
-## Preserve these decisions
+- The owner explicitly chose folder restriction over unrestricted tools on 2026-09-29. No arbitrary Python, shell, VEX snippets, upstream MCP/RPyC server, external apps or permission-bypass mode. A user-provided outside path is still denied.
+- Assistant data stays in this installed plugin or the current saved `$HIP`. `access_policy.py` resolves paths, rejects escapes/private state and sets child temp/profile roots. `scene_policy.py` checks node types, factory definitions, parameters and cooks. Unknown/unsafe operations fail closed. Houdini/Windows runtime files are a necessary host dependency, not a promise of an OS sandbox.
+- Generic code execution was deliberately removed. Do not restore it to make a rig or node work. Custom/unlocked HDAs and unverified APEX rigs are unsupported; report that limitation.
+- Texture search/download/generation/binding and external texture-library configuration are removed. Keep old user caches untouched.
+- Subscription uses a separate plugin-local Codex profile and ephemeral threads. API mode is explicit and separately billed. Preserve exact model IDs, no automatic fallback, no automatic request replay.
+- Chats belong to one saved scene filename. Unsaved scenes use memory only. Save As switches stores; no cross-scene global chat list. Subscription reconnect restores bounded visible history as context, not a native hidden rollout. API checkpoints preserve model items.
+- `.runtime` is a portable verified distribution; `.state` is private installation/account/log/temp state. No first-launch downloads, pip, registry edits or system installers. The setup plan requires explicit unchecked consent. Developer downloads require explicit build flags.
+- Keep credentials out of source, model context, logs and test data. Do not inspect `.state/codex`, `.state/account` or `.secrets` for maintenance. API keys use DPAPI; native Codex owns its private file-store sign-in.
+- Keep `hou` on Houdini's main thread and SDK/network work outside it. Private pipes carry versioned JSON only; diagnostics go to the logger.
+- Preserve run/call IDs, duplicate-call handling, scene-generation guards, Stop and undo groups. A timeout may have applied edits; inspect before retrying.
+- Render in Solaris using Karma XPU; lights in Solaris, materials in MaterialX. Prefer bounded working renders/WIP previews. Never silently switch render engine.
+- Uthana receives only motion text/settings. Download into the saved scene's cache; no uploads of rigs/assets/scenes. Preserve submission idempotency and uncertain-result recovery.
 
-- Default to Codex App Server with ChatGPT sign-in. The Agents SDK API worker is
-  a separate, explicit, paid backend. Never introduce automatic backend/model
-  fallback. Exact model IDs and tool schemas live in `tool_contracts.py`.
-- Keep cloud requests and SDK dependencies outside Houdini's embedded Python.
-  Execute `hou` scene operations on Houdini's main thread. Background rendering
-  and asset/network helpers have separate processes.
-- Keep panel/worker stdout as newline-delimited JSON only. Put diagnostics in the
-  existing logger; do not print debug messages into protocol streams.
-- Preserve run/call IDs, duplicate-call handling, scene-generation guards and Stop
-  behavior. A timed-out mutation may have applied: inspect before retrying.
-  Undo groups are per batch, not atomic whole-turn rollback.
-- Preserve saved chats and drafts. Use temporary `ChatStore` instances or
-  `HOUDINI_ASTRA_CHAT_DIR` for tests. Reconnect must not silently replace a failed
-  resume with an empty thread, replay interrupted requests or generate paid motion.
-- Keep MCP scoped to this panel: loopback `127.0.0.1`, ephemeral port, stdio server,
-  per-thread Codex configuration. Do not edit global Codex/Houdini startup settings.
-  Keep upstream normal execution policy and disabled legacy tools in place.
-- Render in Solaris with Karma XPU; light in Solaris; use MaterialX. Prefer working
-  renders and inspect actual WIP images. Do not switch to Mantra or Karma CPU on
-  failure. Working optimizations belong to exported snapshots, not original nodes.
-- Uthana receives only motion text/settings using its built-in character. Never
-  upload user rigs, geometry, scenes, images or video. Retarget locally. Preserve
-  cache/idempotency and uncertain-submission recovery before another paid request.
-- Keep credentials out of model context, logs, tests, source and commits. Do not
-  read `.secrets/` for routine maintenance. Local textures are read from configured
-  libraries; generated/downloaded textures go to the bounded project cache.
-- Use a signed standalone Python runtime. The local `.python313` installation
-  repaired Windows Smart App Control blocking during development; do not recreate
-  environments from Houdini's unsigned Python or weaken Windows security.
+## Work and validation
 
-## Change and validation workflow
+Run `python -m unittest discover -s tests/unit -t .` with the development or bundled interpreter. Use dummy-key/profile overrides in tests, never real account changes. Native modules are listed in the development guide; some require a license or paid model access. Do not run every integration check indiscriminately. Reports belong to ignored `.local/checks`.
 
-1. Find the responsible module in the architecture map. Extend shared contracts
-   and both backend routes when adding a tool. Solaris/texture tools use native
-   MCP in Subscription mode and the dedicated/API path in API mode.
-2. Prefer adapters in our code to edits under the pinned `vendor/` source. Its
-   `AGENTS.md` describes the upstream project, not our maintainer workflow. If an
-   upstream change is required, read its scoped guidance and record the patch and
-   revision rather than silently replacing the vendor snapshot.
-3. Run relevant offline tests first. Standard regression commands:
+Runtime modules intentionally remain at the root for Houdini import compatibility. Add source checks/tests in their existing folders. Source in Git stays text-only. The release ZIP includes manifest-verified `.runtime` files explicitly; never broadly archive a used plugin directory. Stage intended source, run `scripts/audit_release.py` plus a separate redacted credential/history scan, then `scripts/build_plugin.py`. Preserve third-party notices. Version and changelog move together.
 
-   ```powershell
-   & ./.venv/Scripts/python.exe -m unittest discover -s tests/unit -t .
-   & ./.mcp-venv/Scripts/python.exe -m unittest discover -s tests/textures -t .
-   ```
-
-4. Use disposable `hython` scenes for HOM/APEX/USD/Qt work. `check_mcp.py` tests
-   real Codex/MCP connectivity without a model turn by default. Test prerequisites,
-   fixtures, outputs and paid variants are listed in `DEVELOPMENT.md`.
-5. Do not run every `check_*.py` indiscriminately. `check_chat_restart.py` makes
-   subscription model calls even without `--live`; SDK `--live` without
-   `--subscription` uses the paid API. Do not generate Uthana motion merely to test
-   documentation or a local fix.
-6. Close/reopen the panel after Python/UI changes; reconnecting alone does not reload
-   the panel. Maintain dependency reload order in `astra.pypanel` where necessary.
-   New dynamic tools may require a new chat; resume restores the old dynamic schema.
-7. Update the relevant guide and report actual verification, including skipped
-   machine-specific checks. Historical `validation-*.json` files are not proof that
-   a new change passes. Documentation-only edits do not require model/render runs.
-
-Do not change the user's open scene, remove caches used by scene files, publish,
-push, choose a license or acquire paid assets unless the task calls for it.
-
-## Public source and installation
-
-- Offline tests live in tests/unit and tests/textures; opt-in Houdini/live checks
-  live in tests/integration. Run checks as modules from the repository root
-  (`hython -m tests.integration.check_onboarding`), not as bare script paths.
-- Shared test support is tests/support.py; validation output belongs in ignored
-  .local/checks. Do not recreate flat test/check files at the repository root.
-- Longer architecture, development, lookdev and release guides live in docs/.
-  Runtime modules remain at the root to preserve existing Houdini entry points.
-- The plugin builder excludes tests/, scripts/ and .github/ from artist installs.
-  They remain tracked in Git for development. Preserve runtime files and licenses.
-- The owner approved the first public GitHub publication on 2026-09-27. Keep the
-  existing VPS remote (`vps`) and GitHub remote (`origin`) distinct. Verify destinations
-  before pushing; do not infer permission to publish unrelated repositories or data.
-- Repository root is this directory. Keep sibling scenes/backups outside Git.
-- MIT was selected by the owner; preserve LICENSE and THIRD_PARTY.md.
-- VERSION supplies the client release version. Keep changelog and installation docs current.
-- Setup downloads the exact pinned MCP archive with checksum validation. The entire
-  vendor tree and protocol reference dumps stay ignored; do not commit them.
-- open_panel.py generates .local/astra.pypanel from the portable template. Never
-  embed an installation path in tracked source. local_settings.json holds optional
-  machine paths; only local_settings.example.json is public.
-- Run scripts/audit_release.py on the Git index plus a separate credential scanner
-  before release. Review generated files and staged paths; never force-add secrets.
-- First-run setup is owned by launch_ui/setup_ui/bootstrap. Keep installation off
-  Houdini's UI thread and login in account_worker; credentials travel through pipes,
-  never argv or model context. Native Codex manages subscription auth; API keys use
-  per-Windows-user DPAPI outside source. Never persist plaintext API keys.
-- Account choices are explicit and remembered. Auto-connect must preserve a saved
-  chat's backend/model and must not send a model request or replay pending inputs.
-- scripts/build_plugin.py reads the audited index and VERSION. Stage intended
-  changes before building. The ZIP must contain root package JSON beside the source
-  folder; runtimes, vendor downloads and user settings remain excluded.
-- Test onboarding with temporary HOUDINI_ASTRA_USER_DIR and dummy keys only.
-  check_onboarding.py covers real Qt without network; package discovery checks
-  need an extracted archive and isolated Houdini preferences. Restart Houdini after
-  setup-module changes rather than reloading a live installer thread.
+Keep the existing `vps` and GitHub `origin` remotes distinct. The first public 0.5.2 release was approved; do not infer that an unfinished new release should be published. Do not change the artist's open scene or delete old chats/caches as part of this refactor. Keep sibling scenes, backups and renders out of Git.

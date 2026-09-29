@@ -17,7 +17,10 @@ class BridgeTests(unittest.TestCase):
 
     def test_api_credentials_are_removed(self):
         source = {'OPENAI_API_KEY': 'fake-secret', 'CODEX_API_KEY': 'fake', 'openai_base_url': 'fake', 'UTHANA_API_KEY': 'fake-uthana', 'PATH': 'kept'}
-        self.assertEqual(subscription_environment(source), {'PATH': 'kept'})
+        env = subscription_environment(source)
+        self.assertEqual(env['PATH'], 'kept')
+        self.assertTrue(set(env).isdisjoint({'OPENAI_API_KEY','CODEX_API_KEY','UTHANA_API_KEY','PYTHONHOME','PYTHONPATH'}))
+        self.assertIn('.state', env['CODEX_HOME'])
         self.assertIn('OPENAI_API_KEY', source)
 
     def test_api_key_auth_never_starts_thread(self):

@@ -4,6 +4,8 @@ import json
 import math
 from pathlib import Path
 import sys
+import tempfile
+import shutil
 import hou
 from PySide6 import QtWidgets, QtCore
 import scene_tools
@@ -12,9 +14,18 @@ from uthana_qt import UthanaCall
 from tests.support import isolated_chat_store
 
 ROOT = Path(__file__).resolve().parents[2]
-if len(sys.argv) != 2:
-    raise SystemExit('Usage: hython -m tests.integration.check_uthana_assistant <already-downloaded-asset-id>; no new generation is performed')
+if len(sys.argv) != 3:
+    raise SystemExit('Usage: hython -m tests.integration.check_uthana_assistant <already-downloaded-asset-id> <existing-cache-root>; no new generation is performed')
 asset_id = sys.argv[1]
+from uthana_client import cache_dir
+test_project = tempfile.TemporaryDirectory(prefix='motion-scope-', dir=ARTIFACTS)
+hou.hipFile.save(str(Path(test_project.name) / 'motion.hipnc'))
+source_cache = Path(sys.argv[2]).resolve()
+source_asset = (source_cache / asset_id).resolve()
+assert source_asset.is_relative_to(source_cache)
+assert len(asset_id) == 24 and all(c in '0123456789abcdef' for c in asset_id)
+# Copy only an existing generated motion fixture, never accounts or other caches.
+shutil.copytree(source_asset, cache_dir(asset_id), ignore=shutil.ignore_patterns('*.lock'))
 app = QtWidgets.QApplication.instance() or QtWidgets.QApplication([])
 root = hou.node('/obj').createNode('geo', 'uthana_integration_check', run_init_scripts=False)
 electra = root.createNode('testgeometry_electra::2.0')
@@ -87,9 +98,6 @@ report = {'houdini': hou.applicationVersionString(), 'asset_id': asset_id,
           'checks': checks, 'retarget': result,
           'scope': 'Uses cached text-only Uthana test output. No API calls or uploads in this check; native viewport review remains manual.'}
 (ARTIFACTS / 'validation-uthana.json').write_text(json.dumps(report, indent=2))
-# A reviewable example scene stays in the workspace; the user's live scene is untouched.
-import uuid
-example = ROOT / 'output' / ('uthana_example_' + uuid.uuid4().hex + '.hip')
-example.parent.mkdir(exist_ok=True)
-hou.hipFile.save(str(example))
 print(json.dumps(report, indent=2))
+hou.hipFile.clear(suppress_save_prompt=True)
+test_project.cleanup()

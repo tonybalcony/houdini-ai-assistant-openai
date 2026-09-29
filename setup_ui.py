@@ -18,7 +18,7 @@ class SetupThread(QtCore.QThread):
         self.result=(False,'Setup did not finish.')
     def run(self):
         try:
-            bootstrap.setup(self.backend,self.progress.emit,self.cancelled)
+            bootstrap.setup(self.backend,self.progress.emit,self.cancelled,consent=True)
             self.result=(True,'')
         except Exception as exc:
             self.result=(False,str(exc))
@@ -54,7 +54,7 @@ class SetupDialog(QtWidgets.QDialog):
         heading=QtWidgets.QLabel('Your assistant, your account')
         heading.setStyleSheet('font-size: 21px; font-weight: 600;')
         layout.addWidget(heading)
-        intro=QtWidgets.QLabel('Choose how to connect. Required software is prepared automatically.\nYour choice is remembered for future Houdini sessions.')
+        intro=QtWidgets.QLabel('Choose how to connect. Software is bundled in this plugin.\nReview and approve local setup below before signing in.')
         intro.setWordWrap(True)
         layout.addWidget(intro)
         self.backend=QtWidgets.QComboBox()
@@ -65,6 +65,12 @@ class SetupDialog(QtWidgets.QDialog):
         self.info=QtWidgets.QLabel('')
         self.info.setWordWrap(True)
         layout.addWidget(self.info)
+        self.consent=QtWidgets.QCheckBox('I approve this local setup and the selected service connection.')
+        self.consent.setChecked(False)
+        layout.addWidget(self.consent)
+        self.plan=QtWidgets.QLabel('Included: portable Python, Codex and assistant libraries. No pip, downloads, registry changes or system installation.\nWrites: private account/settings/logs inside this plugin; chats and scene outputs beside your saved $HIP.\nNetwork: browser sign-in and the selected AI service. Optional Uthana receives only motion descriptions.\nWindows/Houdini still use their own system files.')
+        self.plan.setWordWrap(True)
+        layout.addWidget(self.plan)
         self.key=QtWidgets.QLineEdit()
         self.key.setEchoMode(QtWidgets.QLineEdit.EchoMode.Password)
         self.key.setPlaceholderText('Paste your API key')
@@ -85,7 +91,7 @@ class SetupDialog(QtWidgets.QDialog):
         self.browser.clicked.connect(lambda:self.open_browser(self.auth_url))
         layout.addWidget(self.browser)
         self.logs=QtWidgets.QPushButton('Open setup log')
-        self.logs.clicked.connect(lambda:QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(ROOT/'.local/setup.log'))))
+        self.logs.clicked.connect(lambda:QtGui.QDesktopServices.openUrl(QtCore.QUrl.fromLocalFile(str(ROOT/'.state/setup.log'))))
         layout.addWidget(self.logs)
         self.cancel=QtWidgets.QPushButton('Not now')
         self.cancel.clicked.connect(self.reject)
@@ -100,13 +106,16 @@ class SetupDialog(QtWidgets.QDialog):
         self.key.setVisible(api)
         self.key.clear()
         self.info.setText('Your key is verified without generating a response, then encrypted for this Windows user. API usage is billed separately.' if api else
-            'Sign in securely in your browser. If Codex is already signed in, that account will be reused. Subscription limits still apply.')
-        self.status.setText('First setup may download Python, assistant dependencies and Codex from their official sources. No model request is sent during setup.')
+            'Sign in securely in your browser. This plugin has a separate sign-in, stored inside its folder. Subscription limits still apply.')
+        self.status.setText('Setup verifies bundled files. Nothing is downloaded. No model request is sent during setup.')
         self.primary.setText('Continue')
         self.primary.setEnabled(True)
         self.browser.hide()
 
     def advance(self):
+        if not self.consent.isChecked():
+            self.status.setText('Review the setup plan and tick the consent box to continue.')
+            return
         if self.verified:
             backend=self.backend.currentData()
             try:
@@ -167,7 +176,7 @@ class SetupDialog(QtWidgets.QDialog):
             env.insert(key,value)
         env.insert('PYTHONUTF8','1')
         self.process.setProcessEnvironment(env)
-        self.process.setProgram(str(ROOT/'.venv/Scripts/python.exe'))
+        self.process.setProgram(str(ROOT/'.runtime/python/python.exe'))
         mode='api' if self.backend.currentData()=='api' else 'codex'
         self.process.setArguments(['-u',str(ROOT/'account_worker.py'),mode])
         self.process.setWorkingDirectory(str(ROOT))

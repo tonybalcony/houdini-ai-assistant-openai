@@ -1,4 +1,4 @@
-"""Local chat catalogue and SDK checkpoints. Codex owns its durable model history."""
+"""Per-scene chat catalogue and API checkpoints; untitled scenes stay in memory."""
 import json
 import os
 from pathlib import Path
@@ -9,14 +9,21 @@ from contextlib import contextmanager
 
 CHAT_DIR_ENV = 'HOUDINI_ASTRA_CHAT_DIR'
 CHAT_ID_ENV = 'HOUDINI_ASTRA_CHAT_ID'
-DEFAULT_DIRECTORY = Path(__file__).resolve().parent / '.chat_history'
 
 
 class ChatStore:
     def __init__(self, directory=None):
-        self.directory = Path(directory or os.environ.get(CHAT_DIR_ENV) or DEFAULT_DIRECTORY).resolve()
-        self.directory.mkdir(parents=True, exist_ok=True)
-        self.path = self.directory / 'chats.sqlite3'
+        from access_policy import scene_path, scene_directory
+        scene = scene_path()
+        self.directory = Path(directory).resolve() if directory is not None else (scene_directory(scene) if scene else None)
+        self.persistent = self.directory is not None
+        self._memory = None
+        if self.persistent:
+            self.directory.mkdir(parents=True, exist_ok=True)
+            self.path = self.directory / 'chats.sqlite3'
+        else:
+            self.path = None
+            self._memory = sqlite3.connect(':memory:')
         with self.connection() as db:
             db.execute('PRAGMA journal_mode=WAL')
             db.executescript('''
@@ -29,16 +36,19 @@ class ChatStore:
                 );
                 CREATE TABLE IF NOT EXISTS settings (name TEXT PRIMARY KEY, value TEXT);
             ''')
+            if directory is None and scene:
+                db.execute('UPDATE chats SET scene=?', (str(scene),))
 
     @contextmanager
     def connection(self):
-        db = sqlite3.connect(str(self.path), timeout=5)
+        db = self._memory or sqlite3.connect(str(self.path), timeout=5)
         db.row_factory = sqlite3.Row
         try:
             with db:
                 yield db
         finally:
-            db.close()
+            if self.persistent:
+                db.close()
 
     def create(self, scene, backend, model):
         chat_id, now = uuid.uuid4().hex, time.time()
@@ -88,7 +98,12 @@ class ChatStore:
             for row in db.execute('SELECT id,scene FROM chats ORDER BY updated DESC'):
                 if same_scene(row['scene'], scene):
                     return row['id']
-            return active['value'] if active else None
+            return None
+
+    def close(self):
+        if self._memory is not None:
+            self._memory.close()
+            self._memory = None
 
 
 def same_scene(left, right):
@@ -100,6 +115,9 @@ class ChatLease:
     def __init__(self, store, chat_id):
         if len(chat_id) != 32 or any(c not in '0123456789abcdef' for c in chat_id):
             raise ValueError('Invalid chat identifier.')
+        self.file = None
+        if store.directory is None:
+            return
         directory = store.directory / 'locks'
         directory.mkdir(exist_ok=True)
         self.file = (directory / (chat_id + '.lock')).open('a+b')
@@ -119,5 +137,5 @@ class ChatLease:
             raise RuntimeError('This chat is open in another panel. Close it there or choose another chat.')
 
     def close(self):
-        if not self.file.closed:
+        if self.file is not None and not self.file.closed:
             self.file.close()
