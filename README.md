@@ -6,7 +6,7 @@ An independent community assistant inside Houdini. Chat with GPT-6 Astra, GPT-5.
 
 ## Install without a terminal
 
-1. Download the **full `houdini-ai-assistant-0.6.0.zip` plugin asset** from the release you are installing. GitHub's automatic **Source code** ZIP does not include the runtime. [Releases](https://github.com/tonybalcony/houdini-ai-assistant-openai/releases).
+1. [Download the complete 0.6.0 installer ZIP](https://github.com/tonybalcony/houdini-ai-assistant-openai/releases/download/v0.6.0-rc.1/houdini-ai-assistant-0.6.0.zip) (194 MiB), or open the [v0.6.0-rc.1 pre-release](https://github.com/tonybalcony/houdini-ai-assistant-openai/releases/tag/v0.6.0-rc.1) and select `houdini-ai-assistant-0.6.0.zip` under **Assets**. Do **not** use **Code > Download ZIP** or **Source code**: those do not include the runtime.
 2. In Houdini choose **File > Install Package Archive...**, select the ZIP and install in your own writable Houdini packages folder. Alternatively extract the ZIP there, keeping the package JSON beside the `houdini-ai-assistant-openai` folder.
 3. Restart Houdini, enable the **AI Assistant** shelf, then click **Open Assistant**.
 4. Review the setup plan and tick its consent checkbox. The plugin verifies its bundled Python, Codex and libraries. **It does not download dependencies, run pip, install Python system-wide, edit the registry or change PATH.**

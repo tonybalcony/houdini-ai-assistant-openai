@@ -9,7 +9,7 @@ Prepared 2026-09-30. Read this with [AGENTS.md](../AGENTS.md), [Architecture](AR
 - GitHub: [tonybalcony/houdini-ai-assistant-openai](https://github.com/tonybalcony/houdini-ai-assistant-openai), branch `main`, remote `origin`.
 - VPS: SSH host alias `agent-hub`, checkout `/srv/projects/houdini_ai_assistant`, branch `main`, local remote `vps`. The VPS checkout accepts a clean fast-forward push using `receive.denyCurrentBranch=updateInstead`.
 - The owner authorized pushing source and this handover to both existing remotes on 2026-09-30. Verify both branch hashes after pushing. Do not force-push or overwrite a dirty VPS checkout.
-- The new installer has been built and tested locally. Pushing Git source does not upload its ignored installer ZIP or create a GitHub release. The last published release remains 0.5.2 until an explicit new release operation.
+- The tested installer and checksum are now published as [pre-release v0.6.0-rc.1](https://github.com/tonybalcony/houdini-ai-assistant-openai/releases/tag/v0.6.0-rc.1) on 2026-09-30. GitHub's reported asset digest matches the checksum below. The tag targets implementation commit `8782076`; later documentation lives on `main`. The same installer is retained on the VPS under `.local/releases/v0.6.0-rc.1/`, outside Git history.
 - Original source is MIT. Runtime components retain their own licenses and notices.
 
 ## Owner decisions: do not undo these
@@ -90,7 +90,7 @@ The artifact built from implementation commit `8782076` is:
 - **4,025 ZIP entries**, including **3,973 manifest-listed runtime files**.
 - Companion checksum: `dist/houdini-ai-assistant-0.6.0.zip.sha256`.
 
-This handover was added after the installer build; it changes no runtime behavior and is available in Git. A rebuilt archive including newer documentation will have a different checksum. Preserve the source revision and checksum for whichever artifact is actually published.
+This handover and the publication links were added after the installer build; they change no runtime behavior and are available in Git. A rebuilt archive including newer documentation will have a different checksum. Preserve the source revision and checksum for whichever artifact is actually published.
 
 Install the complete plugin asset through Houdini's **File > Install Package Archive...**, or extract it into the user's packages folder with its JSON beside `houdini-ai-assistant-openai/`. Disable the old package, restart Houdini and launch the AI Assistant shelf. GitHub's automatic source ZIP has no runtime and is not the artist installer. See [README installation](../README.md#install-without-a-terminal).
 
@@ -144,5 +144,5 @@ Remaining work before treating this candidate as a stable public installer:
 1. Have a second Windows user install the complete ZIP and perform fresh subscription/API sign-in with their own account. This was not replaced by simulated login tests.
 2. Confirm focus in a real docked Houdini pane and review supported animation visually. Headless/native tests do not cover every workstation's window behavior.
 3. Expand custom-node/rig support only through audited checked adapters and meaningful denial tests. Never reintroduce unrestricted execution to make a scene work.
-4. If publishing an installer release, attach the audited ZIP/checksum as release assets rather than adding binaries to Git; mark it a pre-release until the remaining sign-in checks pass.
+4. Keep the published installer marked as a pre-release until the remaining sign-in checks pass. Future rebuilt ZIPs/checksums must be audited and attached as release assets, never added to Git.
 5. Keep remote source hashes aligned and record any future installer rebuild's source revision, test scope and checksum.
