@@ -54,4 +54,4 @@ Close the old assistant and install 0.6.0 into a fresh package folder. Disable t
 
 ## Development
 
-See [Development](docs/DEVELOPMENT.md), [Architecture](docs/ARCHITECTURE.md), [agent guidance](AGENTS.md) and [release checklist](docs/RELEASE_CHECKLIST.md). Original project code is MIT; bundled software keeps its own licenses, described in [THIRD_PARTY.md](THIRD_PARTY.md).
+See [Development](docs/DEVELOPMENT.md), [Architecture](docs/ARCHITECTURE.md), [agent guidance](AGENTS.md) and [release checklist](docs/RELEASE_CHECKLIST.md), and [0.6.0 handover](docs/HANDOVER.md). Original project code is MIT; bundled software keeps its own licenses, described in [THIRD_PARTY.md](THIRD_PARTY.md).

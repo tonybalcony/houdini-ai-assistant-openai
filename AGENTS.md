@@ -1,6 +1,6 @@
 # Coding-agent guide — 0.6.0
 
-This repository is a Windows Houdini panel plus portable local workers. Read [Architecture](docs/ARCHITECTURE.md), [Development](docs/DEVELOPMENT.md), [Security](SECURITY.md) and [Release checklist](docs/RELEASE_CHECKLIST.md).
+This repository is a Windows Houdini panel plus portable local workers. Read [Architecture](docs/ARCHITECTURE.md), [Development](docs/DEVELOPMENT.md), [Security](SECURITY.md) and [Release checklist](docs/RELEASE_CHECKLIST.md). The [0.6.0 handover](docs/HANDOVER.md) records the implementation, evidence and remaining work.
 
 ## Decisions to preserve
 
@@ -23,4 +23,4 @@ Run `python -m unittest discover -s tests/unit -t .` with the development or bun
 
 Runtime modules intentionally remain at the root for Houdini import compatibility. Add source checks/tests in their existing folders. Source in Git stays text-only. The release ZIP includes manifest-verified `.runtime` files explicitly; never broadly archive a used plugin directory. Stage intended source, run `scripts/audit_release.py` plus a separate redacted credential/history scan, then `scripts/build_plugin.py`. Preserve third-party notices. Version and changelog move together.
 
-Keep the existing `vps` and GitHub `origin` remotes distinct. The first public 0.5.2 release was approved; do not infer that an unfinished new release should be published. Do not change the artist's open scene or delete old chats/caches as part of this refactor. Keep sibling scenes, backups and renders out of Git.
+Keep the existing `vps` and GitHub `origin` remotes distinct. The owner authorized pushing the 0.6.0 source and handover to both existing remotes on 2026-09-30. That does not itself upload the ignored installer artifact; record any separate release/tag operation explicitly. Do not change the artist's open scene or delete old chats/caches as part of this refactor. Keep sibling scenes, backups and renders out of Git.

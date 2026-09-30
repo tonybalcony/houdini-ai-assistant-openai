@@ -1,6 +1,6 @@
 # Release review — 0.6.0 candidate
 
-The owner requested the contained installer and explicitly chose checked tools over unrestricted execution. No new publication is implied by this refactor. Existing GitHub release: 0.5.2.
+The owner requested the contained installer and explicitly chose checked tools over unrestricted execution. On 2026-09-30 the owner authorized pushing source and the [handover](HANDOVER.md) to GitHub and the VPS. Installer release assets/tags remain a separate operation. Existing GitHub release: 0.5.2.
 
 - [x] Remove texture tools and upstream unrestricted MCP/RPyC integration.
 - [x] Bundle portable Python/Codex/libraries; no first-run downloads or OS installer.
@@ -8,7 +8,7 @@ The owner requested the contained installer and explicitly chose checked tools o
 - [x] Isolate account state inside the plugin; no global sign-in/history migration.
 - [x] Per-saved-scene chats; untitled chats in memory; project-local render/motion caches.
 - [x] Enforce direct path and checked scene-operation boundaries; no bypass mode.
-- [x] Offline suite: 71 tests passed (one Windows symlink-permission skip); separate Windows junction escape test passed. Native Codex initialized in an empty private test profile without account/model calls.
+- [x] Offline suite: 71 tests completed: 70 passed and one Windows symlink-permission skip; separate Windows junction escape test passed. Native Codex initialized in an empty private test profile without account/model calls.
 - [x] Staged source and full Git history credential scans: no findings. Index/source audit: no findings. Full ZIP content and runtime SHA-256 audit: passed; no private state included.
 - [x] Native source tests: setup consent/retry/cancel, panel chat restore, first Save/Save As/load/untitled discard, checked edits and denial cases, SDK bridge and APEX/focus regressions.
 - [x] Extracted full package: 3,973 runtime file hashes, Python/Codex signatures, relocated imports, offline setup, native package/shelf discovery, consent UI, scene chat and checked geometry. No sign-in/model request performed.
